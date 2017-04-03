@@ -20,7 +20,7 @@
  *  @return bool - TRUE if the packet module was successfully initialized.
  */
 
-uint8_t Packet_Command,		/*!< The packet's command */
+uint8_t Packet_Command,	/*!< The packet's command */
   Packet_Parameter1, 	/*!< The packet's 1st parameter */
   Packet_Parameter2, 	/*!< The packet's 2nd parameter */
   Packet_Parameter3,	/*!< The packet's 3rd parameter */
@@ -107,36 +107,39 @@ bool Packet_Put(const uint8_t command, const uint8_t parameter1, const uint8_t p
 
 bool Packet_Processor(void){
   bool success;
+  //Gets the command byte of packet. Sets most significant bit to 0 to get command regardless of ACK enabled/disabled
   uint8_t commandByte = Packet_Command & ~PACKET_ACK_MASK;
   switch(commandByte)
   {
-    case 0x04: //Case ?
+    case 0x04: //Case Special – Get startup values
 	  Packet_Put(0x04, 0x0, 0x0, 0x0);
 	  Packet_Put(0x09, 0x76, 0x01, 0x00);
 	  Packet_Put(0x0B, 0x01, 0xF1, 0x05);
 	  success = true;
 	  break;
-    case 0x09:
+    case 0x09: //Case Special – Get version
 	  Packet_Put(0x09, 0x76, 0x01, 0x00);
 	  success = true;
 	  break;
-    case 0x0B:
+    case 0x0B: //Case Tower number (get & set)
 	  Packet_Put(0x0B, 0x01, 0xF1, 0x05);
 	  success = true;
 	  break;
     default:
 	  success = false;
   }
-  //is ACK requested?
+  //Check if packet acknowledgement enabled
   if ((Packet_Command >= PACKET_ACK_MASK))
   {
     if (success)
 	{
+	  //ACK the packet
 	  Packet_Put(Packet_Command, Packet_Parameter1, Packet_Parameter2, Packet_Parameter3);
 	  return true;
     } 
 	else
 	{
+	  //NAK the packet
 	  Packet_Put(commandByte, Packet_Parameter1, Packet_Parameter2, Packet_Parameter3);
 	  return false;
     }
