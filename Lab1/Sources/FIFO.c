@@ -23,21 +23,20 @@ void FIFO_Init(TFIFO * const FIFO)
  */
 bool FIFO_Put(TFIFO * const FIFO, const uint8_t data)
 {
-  // first need to check if there is space in the fifo
+  // return false if there is no room in FIFO
   if(FIFO->NbBytes >= FIFO_SIZE)
   {
-  // if not, return false,
-  return false;
+    return false;
   }
   else
   {
-    // if room, continue, return true, increment end
+    // if room, continue, increment end, return true
     FIFO->Buffer[FIFO->End++] = data; //the value of End gets incremented AFTER it is accessed
-	FIFO->NbBytes++;
-	if (FIFO->End>=FIFO_SIZE)
-	{
-	  FIFO->End = 0;
-	}
+    FIFO->NbBytes++;
+    if (FIFO->End>=FIFO_SIZE)
+    {
+      FIFO->End = 0;
+    }
     return false;
   } 
 }
@@ -51,8 +50,7 @@ bool FIFO_Put(TFIFO * const FIFO, const uint8_t data)
  */
 bool FIFO_Get(TFIFO * const FIFO, uint8_t * const dataPtr)
 {
-  // check if empty
-  // if is, return false
+  // return false if FIFO is empty
   if(FIFO->NbBytes == 0)
   {
     return false;
