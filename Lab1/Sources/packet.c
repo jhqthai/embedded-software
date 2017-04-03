@@ -26,7 +26,7 @@ uint8_t Packet_Command,	/*!< The packet's command */
   Packet_Parameter3,	/*!< The packet's 3rd parameter */
   Packet_Checksum;	/*!< The packet's checksum */
 
-uint8_t packetIndex = 0;
+uint8_t PacketIndex = 0;
 
 const uint8_t PACKET_ACK_MASK = 0x80;
 
@@ -46,8 +46,8 @@ bool Packet_Get(void){
     //if uart recieves a character, store in uartStore
     if (UART_InChar(&uartStore))
 	{
-    //Places uartstore in the variable that corresponds to packetIndex - also increments packetIndex
-      switch(packetIndex++)
+    //Places uartstore in the variable that corresponds to PacketIndex - also increments PacketIndex
+      switch(PacketIndex++)
 	  {
 		case 0:
 		  Packet_Command = uartStore;
@@ -66,8 +66,8 @@ bool Packet_Get(void){
 		  //compares incoming byte with expected checksum
 		  if((Packet_Command ^ Packet_Parameter1 ^ Packet_Parameter2 ^ Packet_Parameter3) == Packet_Checksum)
 		  {
-		  //valid packet, reset packetIndex and return true
-		    return !(packetIndex = 0);
+		  //valid packet, reset PacketIndex and return true
+		    return !(PacketIndex = 0);
 		  }
 		  else
 		  {
@@ -76,7 +76,7 @@ bool Packet_Get(void){
 		    Packet_Parameter1 = Packet_Parameter2;
 		    Packet_Parameter2 = Packet_Parameter3;
 		    Packet_Parameter3 = Packet_Checksum;
-		    packetIndex = 4;
+		    PacketIndex = 4;
 		    return false;
 		  }
 		  break;
