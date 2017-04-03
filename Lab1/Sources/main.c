@@ -54,7 +54,8 @@ int main(void)
   {
     UART_Poll();
     //if a valid packet is received
-    if (Packet_Get()) {
+    if (Packet_Get())
+    {
       Packet_Processor();
     }
   }
