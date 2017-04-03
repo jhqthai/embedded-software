@@ -36,7 +36,7 @@ bool UART_Init(const uint32_t baudRate, const uint32_t moduleClk)
   //UART baud rate = UART module clock / (16 Ã— (SBR[12:0] + BRFD))
   uint16_t sbr = moduleClk/(16*baudRate);
   //top 5 bits for UART2_BDH
-  uint8_t sbrBHD = sbr >> 8;
+  uint8_t sbrBDH = sbr >> 8;
   //keep the top 3 bits of bdh and set the last 5 to the top 5 bits of SBR
   UART2_BDH |= sbrBDH & 0x1F;
 
