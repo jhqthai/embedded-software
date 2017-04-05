@@ -1,8 +1,8 @@
 /*! @file
  *
- *  @brief Routines to implement packet encoding and decoding for the serial port.
+ *  @brief I/O routines for UART communications on the TWR-K70F120M.
  *
- *  This contains the functions for implementing the "Tower to PC Protocol" 5-byte packets.
+ *  This contains the functions for operating the UART (serial port).
  *
  *  @author John Thai & Jason Gavriel
  *  @date 2017-xx-xx
@@ -47,12 +47,12 @@ bool UART_Init(const uint32_t baudRate, const uint32_t moduleClk)
   //Top 5 bits for UART2_BDH
   uint8_t sbrBDH = sbr >> 8;
   //Keep the top 3 bits of bdh and set the last 5 to the top 5 bits of SBR
-  UART2_BDH |= sbrBDH & 0x1F;
+  UART2_BDH |= UART_BDH_SBR(sbrBDH);
 
   //Bottom 8 bits for UART2_BDL
   uint8_t sbrBDL = (uint8_t) sbr;
   //Bottom 8 bits directly into UART2_BDL
-  UART2_BDL = sbrBDL;
+  UART2_BDL = UART_BDL_SBR(sbrBDL);
 
   //Baud frequency with 5 further bits of accuracy (1/32ths)
   uint8_t brfa = (moduleClk*2/baudRate)%32;
@@ -66,7 +66,7 @@ bool UART_Init(const uint32_t baudRate, const uint32_t moduleClk)
 
   FIFO_Init(&RxFIFO);
   FIFO_Init(&TxFIFO);
-
+  
   return true;
   
 }
