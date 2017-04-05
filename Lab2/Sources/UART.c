@@ -1,3 +1,12 @@
+/*! @file
+ *
+ *  @brief Routines to implement packet encoding and decoding for the serial port.
+ *
+ *  This contains the functions for implementing the "Tower to PC Protocol" 5-byte packets.
+ *
+ *  @author John Thai & Jason Gavriel
+ *  @date 2017-xx-xx
+ */
 
 #include "FIFO.h"
 #include "UART.h"
@@ -5,8 +14,8 @@
 #include "CPU.h"
 #include "stdbool.h"
 
-TFIFO RxFIFO;
-TFIFO TxFIFO;
+static TFIFO RxFIFO;
+static TFIFO TxFIFO;
 
 /*! @brief Sets up the UART interface before first use.
  *
@@ -33,22 +42,22 @@ bool UART_Init(const uint32_t baudRate, const uint32_t moduleClk)
   //DISABLE UART 2 C2 Transmitter
   UART2_C2 &= ~UART_C2_TE_MASK;
 
-  //UART baud rate = UART module clock / (16 Ã— (SBR[12:0] + BRFD))
+  //UART baud rate = UART module clock / (16(SBR[12:0] + BRFD))
   uint16_t sbr = moduleClk/(16*baudRate);
-  //top 5 bits for UART2_BDH
+  //Top 5 bits for UART2_BDH
   uint8_t sbrBDH = sbr >> 8;
-  //keep the top 3 bits of bdh and set the last 5 to the top 5 bits of SBR
+  //Keep the top 3 bits of bdh and set the last 5 to the top 5 bits of SBR
   UART2_BDH |= sbrBDH & 0x1F;
 
-  //bottom 8 bits for UART2_BDL
-  uint8_t sbrBDL = sbr;
-  //bottom 8 bits directly into UART2_BDL
+  //Bottom 8 bits for UART2_BDL
+  uint8_t sbrBDL = (uint8_t) sbr;
+  //Bottom 8 bits directly into UART2_BDL
   UART2_BDL = sbrBDL;
 
   //Baud frequency with 5 further bits of accuracy (1/32ths)
   uint8_t brfa = (moduleClk*2/baudRate)%32;
   //Set the bottom 5 bits of c4 to that of baud rate fine adjust (brfa)
-  UART2_C4 |=  brfa & 0x1F;
+  UART2_C4 |=  UART_C4_BRFA(brfa);
 
   //Enable UART2 C2 Receiver
   UART2_C2 |= UART_C2_RE_MASK;
@@ -90,16 +99,13 @@ bool UART_OutChar(const uint8_t data)
  */
 void UART_Poll(void)
 {
-  //checks uart2_s1 "TDRE" bit -> 1 indicates we should read TxFIFO and write to UART_D
+  //Checks UART2_S1 "TDRE" bit -> 1 indicates we should read TxFIFO and write to UART_D
   if (UART2_S1 & UART_S1_TDRE_MASK)
-  {
     FIFO_Get(&TxFIFO, &UART2_D);
-  }
-  //checks uart2_s1 "RDRF" bit -> 1 indicates we should read UART_D and write to RxFIFO
+
+  //Checks UART2_S1 "RDRF" bit -> 1 indicates we should read UART_D and write to RxFIFO
   if (UART2_S1 & UART_S1_RDRF_MASK)
-  {
     FIFO_Put(&RxFIFO, UART2_D);
-  }
 }
 
 

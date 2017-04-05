@@ -1,5 +1,15 @@
+/*! @file
+ *
+ *  @brief Routines to implement a FIFO buffer.
+ *
+ *  This contains the structure and "methods" for accessing a byte-wide FIFO.
+ *
+ *  @author John Thai & Jason Gavriel
+ *  @date 2017-xx-xx
+ */
+
+
 #include "FIFO.h"
-//handles bools
 #include "stdbool.h"
 
 /*! @brief Initialize the FIFO before first use.
@@ -23,22 +33,17 @@ void FIFO_Init(TFIFO * const FIFO)
  */
 bool FIFO_Put(TFIFO * const FIFO, const uint8_t data)
 {
-  // return false if there is no room in FIFO
+  // Return false if there is no room in FIFO
   if(FIFO->NbBytes >= FIFO_SIZE)
-  {
     return false;
-  }
-  else
-  {
-    // if room, continue, increment end, return true
-    FIFO->Buffer[FIFO->End++] = data; //the value of End gets incremented AFTER it is accessed
-    FIFO->NbBytes++;
-    if (FIFO->End>=FIFO_SIZE)
-    {
-      FIFO->End = 0;
-    }
-    return false;
-  } 
+
+  //If room, continue, increment end, return true
+  FIFO->Buffer[FIFO->End++] = data; // The value of End gets incremented AFTER it is accessed
+  FIFO->NbBytes++;
+  if (FIFO->End>=FIFO_SIZE)
+    FIFO->End = 0;
+
+  return false;
 }
 
 /*! @brief Get one character from the FIFO.
@@ -50,20 +55,17 @@ bool FIFO_Put(TFIFO * const FIFO, const uint8_t data)
  */
 bool FIFO_Get(TFIFO * const FIFO, uint8_t * const dataPtr)
 {
-  // return false if FIFO is empty
+  // Return false if FIFO is empty
   if(FIFO->NbBytes == 0)
-  {
     return false;
-  }
-  // if not, return true, increment start
+
+  //If not, return true, increment start
   else
   {
-    *dataPtr = FIFO->Buffer[FIFO->Start++]; //the value of Start is incremented AFTER it is accessed
+    *dataPtr = FIFO->Buffer[FIFO->Start++]; // The value of Start is incremented AFTER it is accessed
     FIFO->NbBytes--;
     if (FIFO->Start>=FIFO_SIZE)
-    {
       FIFO->Start = 0;
-    }	  	
     return true;
   }
 }
