@@ -8,7 +8,6 @@
  *  @date 2017-04-05
  */
 
-// new types
 #include "types.h"
 #include "stdbool.h"
 #include "UART.h"
@@ -69,7 +68,7 @@ bool Packet_Get(void)
         //Compares incoming byte with expected checksum
         if((Packet_Command ^ Packet_Parameter1 ^ Packet_Parameter2 ^ Packet_Parameter3) == Packet_Checksum)
         {
-	  //Valid packet, reset PacketIndex and return true
+	    //Valid packet, reset PacketIndex and return true
           PacketIndex = 0;
           return true;
         }
