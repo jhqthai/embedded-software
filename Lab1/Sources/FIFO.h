@@ -1,12 +1,13 @@
 /*! @file
  *
- *  @brief Routines to implement a FIFO buffer.
+ *  @brief Routines to implement packet encoding and decoding for the serial port.
  *
- *  This contains the structure and "methods" for accessing a byte-wide FIFO.
+ *  This contains the functions for implementing the "Tower to PC Protocol" 5-byte packets.
  *
- *  @author PMcL
- *  @date 2015-07-23
+ *  @author John Thai & Jason Gavriel
+ *  @date 2017-04-05
  */
+
 
 #ifndef FIFO_H
 #define FIFO_H
