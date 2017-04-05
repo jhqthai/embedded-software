@@ -36,6 +36,52 @@
 
 // Global variables
 
+/*! Reads the command byte and processes relevant functionality
+ *  Also handles ACKing and NAKing
+ *
+ *  @return bool - TRUE a valid case received & packet ACK
+ */
+bool Packet_Processor(void)
+{
+  bool success;
+  // Gets the command byte of packet. Sets most significant bit to 0 to get command regardless of ACK enabled/disabled
+  uint8_t commandByte = Packet_Command & ~PACKET_ACK_MASK;
+  switch(commandByte)
+  {
+    case 0x04: // Case Special - Get startup values
+	  Packet_Put(0x04, 0x0, 0x0, 0x0);
+	  Packet_Put(0x09, 0x76, 0x01, 0x00);
+	  Packet_Put(0x0B, 0x01, 0xF1, 0x05);
+	  success = true;
+	  break;
+    case 0x09: // Case Special - Get version
+	  Packet_Put(0x09, 0x76, 0x01, 0x00);
+	  success = true;
+	  break;
+    case 0x0B: // Case Tower number (get & set)
+	  Packet_Put(0x0B, 0x01, 0xF1, 0x05);
+	  success = true;
+	  break;
+    default:
+	  success = false;
+  }
+  // Check if packet acknowledgment enabled
+  if ((Packet_Command >= PACKET_ACK_MASK))
+  {
+    if (success)
+	{
+	  // ACK the packet
+	  Packet_Put(Packet_Command, Packet_Parameter1, Packet_Parameter2, Packet_Parameter3);
+	  return true;
+    }
+	else
+	{
+	  // NAK the packet
+	  Packet_Put(commandByte, Packet_Parameter1, Packet_Parameter2, Packet_Parameter3);
+	  return false;
+    }
+  }
+}
 
 /*lint -save  -e970 Disable MISRA rule (6.3) checking. */
 int main(void)
@@ -50,6 +96,9 @@ int main(void)
 
   /* Write your code here */
   Packet_Init(38400, CPU_BUS_CLK_HZ);
+  //Makes the packer processor execute "0x04 Special - Get startup values" on startup
+  Packet_Command = 0x04;
+  Packet_Processor();
   for (;;)
   {
     UART_Poll();
