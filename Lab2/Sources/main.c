@@ -29,6 +29,7 @@
 
 // CPU module - contains low level hardware initialization routines
 #include "Cpu.h"
+#include "Events.h"
 #include "PE_Types.h"
 #include "PE_Error.h"
 #include "PE_Const.h"
@@ -36,6 +37,7 @@
 #include "FIFO.h"
 #include "UART.h"
 #include "packet.h"
+#include "LEDs.h"
 
 // Defining constants
 #define CMD_GET_STARTUP 0x04
@@ -116,6 +118,13 @@ int main(void)
 
   /* Write your code here */
   Packet_Init(38400, CPU_BUS_CLK_HZ);
+
+  //init LEDs
+  LEDs_Init();
+
+  LEDs_On(LED_BLUE);
+  LEDs_Off(LED_BLUE);
+  LEDs_Toggle(LED_BLUE);
 
   //Makes the Packet_Processor function execute "0x04 Special - Get startup values" on startup
   Packet_Command = CMD_GET_STARTUP;

@@ -4,13 +4,13 @@
 /*##                                   */
 /*##     Filename  : ProcessorExpert.ld */
 /*##                                   */
-/*##     Project   : Lab1              */
+/*##     Project   : Lab2_170410       */
 /*##                                   */
 /*##     Processor : MK70FN1M0VMJ12    */
 /*##                                   */
 /*##     Compiler  : GNU C Compiler    */
 /*##                                   */
-/*##     Date/Time : 2015-07-23, 11:20, # CodeGen: 4 */
+/*##     Date/Time : 2017-04-10, 14:32, # CodeGen: 0 */
 /*##                                   */
 /*##     Abstract  :                   */
 /*##                                   */
@@ -38,7 +38,7 @@ __stack_size = 0x0400;                 /* required amount of stack */
 
 MEMORY {
   m_interrupts (RX) : ORIGIN = 0x00000000, LENGTH = 0x000001E8
-  m_text      (RX) : ORIGIN = 0x00000410, LENGTH = 0x000FFBF0
+  m_text      (RX) : ORIGIN = 0x00000410, LENGTH = 0x0007FBF0
   m_data      (RW) : ORIGIN = 0x1FFF0000, LENGTH = 0x00010000
   m_data_20000000 (RW) : ORIGIN = 0x20000000, LENGTH = 0x00010000
   m_cfmprotrom  (RX) : ORIGIN = 0x00000400, LENGTH = 0x00000010

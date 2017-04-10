@@ -12,23 +12,16 @@
 #include "UART.h"
 #include "MK70F12.h"
 #include "CPU.h"
-#include "stdbool.h"
+
 
 static TFIFO RxFIFO;
 static TFIFO TxFIFO;
 
-/*! @brief Sets up the UART interface before first use.
- *
- *  @param baudRate The desired baud rate in bits/sec.
- *  @param moduleClk The module clock rate in Hz
- *  @return bool - TRUE if the UART was successfully initialized.
- */
-
-
+//Initialises the registers needed to enable UART, pin and peripheral function and to setup correct baud rate
 bool UART_Init(const uint32_t baudRate, const uint32_t moduleClk)
 {
   //Enable UART2 Module
-  SIM_SCGC4 |= SIM_SCGC4_UART2_MASK;
+	SIM_SCGC4 |= SIM_SCGC4_UART2_MASK;
   //Enable PORT E pin routing
   SIM_SCGC5 |= SIM_SCGC5_PORTE_MASK;
   
@@ -70,33 +63,21 @@ bool UART_Init(const uint32_t baudRate, const uint32_t moduleClk)
   return true;
   
 }
-/*! @brief Get a character from the receive FIFO if it is not empty.
- *
- *  @param dataPtr A pointer to memory to store the retrieved byte.
- *  @return bool - TRUE if the receive FIFO returned a character.
- *  @note Assumes that UART_Init has been called.
- */
+
+
+//Used by tower to receive a character from RxFIFO
 bool UART_InChar(uint8_t * const dataPtr)
 {
   return FIFO_Get(&RxFIFO, dataPtr);
 }
 
-/*! @brief Put a byte in the transmit FIFO if it is not full.
- *
- *  @param data The byte to be placed in the transmit FIFO.
- *  @return bool - TRUE if the data was placed in the transmit FIFO.
- *  @note Assumes that UART_Init has been called.
- */
+//Used by tower to transmit a character to TxFIFO
 bool UART_OutChar(const uint8_t data)
 {
   return FIFO_Put(&TxFIFO, data);
 }
 
-/*! @brief Poll the UART status register to try and receive and/or transmit one character.
- *
- *  @return void
- *  @note Assumes that UART_Init has been called.
- */
+//Checks to see if there is a char to read from or write to the relevant FIFO
 void UART_Poll(void)
 {
   //Checks UART2_S1 "TDRE" bit -> 1 indicates we should read TxFIFO and write to UART_D

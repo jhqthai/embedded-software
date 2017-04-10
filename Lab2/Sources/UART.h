@@ -17,7 +17,7 @@
 /*! @brief Sets up the UART interface before first use.
  *
  *  @param baudRate The desired baud rate in bits/sec.
- *  @param moduleClk The module clock rate in Hz
+ *  @param moduleClk The module clock rate in Hz.
  *  @return bool - TRUE if the UART was successfully initialized.
  */
 bool UART_Init(const uint32_t baudRate, const uint32_t moduleClk);

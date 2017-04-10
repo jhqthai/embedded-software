@@ -51,6 +51,6 @@ bool FIFO_Put(TFIFO * const FIFO, const uint8_t data);
  *  @return bool - TRUE if data is successfully retrieved from the FIFO.
  *  @note Assumes that FIFO_Init has been called.
  */
-bool FIFO_Get(TFIFO * const FIFO, uint8_t * const dataPtr);
+bool FIFO_Get(TFIFO * const FIFO, uint8_t volatile * const dataPtr);
 
 #endif

@@ -10,13 +10,9 @@
 
 
 #include "FIFO.h"
-#include "stdbool.h"
+#include "types.h"
 
-/*! @brief Initialize the FIFO before first use.
- *
- *  @param FIFO A pointer to the FIFO that needs initializing.
- *  @return void
- */
+// Initialises the FIFO to starting values
 void FIFO_Init(TFIFO * const FIFO)
 {
   FIFO->Start = 0;
@@ -24,13 +20,7 @@ void FIFO_Init(TFIFO * const FIFO)
   FIFO->NbBytes = 0;
 }
 
-/*! @brief Put one character into the FIFO.
- *
- *  @param FIFO A pointer to a FIFO struct where data is to be stored.
- *  @param data A byte of data to store in the FIFO buffer.
- *  @return bool - TRUE if data is successfully stored in the FIFO.
- *  @note Assumes that FIFO_Init has been called.
- */
+// gets an 8 bit int and puts it in the correct position of the FIFO buffer if space available
 bool FIFO_Put(TFIFO * const FIFO, const uint8_t data)
 {
   // Return false if there is no room in FIFO
@@ -46,14 +36,8 @@ bool FIFO_Put(TFIFO * const FIFO, const uint8_t data)
   return false;
 }
 
-/*! @brief Get one character from the FIFO.
- *
- *  @param FIFO A pointer to a FIFO struct with data to be retrieved.
- *  @param dataPtr A pointer to a memory location to place the retrieved byte.
- *  @return bool - TRUE if data is successfully retrieved from the FIFO.
- *  @note Assumes that FIFO_Init has been called.
- */
-bool FIFO_Get(TFIFO * const FIFO, uint8_t * const dataPtr)
+//If data in the FIFO, retrieve the "first in" and stores it in the memory address of the pointer argument
+bool FIFO_Get(TFIFO * const FIFO, uint8_t volatile * const dataPtr)
 {
   // Return false if FIFO is empty
   if(FIFO->NbBytes == 0)
