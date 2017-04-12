@@ -149,6 +149,11 @@ bool Flash_Erase(void){
 
 	//waits for command complete interrupt flag
 	while(!(FTFE_FSTAT & FTFE_FSTAT_CCIF_MASK));
+	
+	FCCOB0 |= FCMD_ERSSCR; //FCMD Erase sector (p.882 K70RefManual)
+	FCC0B1 |= //bits 16-23 (inclusive) of flash address
+	FCC0B2 |= //bits 8-15 (inclusive) of flash address
+	FCC0B3 |= //first 8 bits of flash address
 }
 
 
