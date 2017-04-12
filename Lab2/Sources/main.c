@@ -38,6 +38,7 @@
 #include "UART.h"
 #include "packet.h"
 #include "LEDs.h"
+#include "Flash.h"
 
 // Defining constants
 #define CMD_GET_STARTUP 0x04
@@ -121,10 +122,22 @@ int main(void)
 
   //init LEDs
   LEDs_Init();
-
   LEDs_On(LED_BLUE);
   LEDs_Off(LED_BLUE);
   LEDs_Toggle(LED_BLUE);
+  LEDs_Toggle(LED_YELLOW);
+  LEDs_Toggle(LED_ORANGE);
+  LEDs_Toggle(LED_GREEN);
+  LEDs_Toggle(LED_YELLOW);
+
+  volatile uint16union_t *NvTowerNb;
+  bool success = Flash_AllocateVar(&NvTowerNb, sizeof(*NvTowerNb));
+
+  volatile uint32union_t *NvTowerNb2;
+  bool success2 = Flash_AllocateVar(&NvTowerNb2, sizeof(*NvTowerNb2));
+
+  volatile uint8_t *NvTowerNb3;
+  bool success3 = Flash_AllocateVar(&NvTowerNb3, sizeof(*NvTowerNb3));
 
   //Makes the Packet_Processor function execute "0x04 Special - Get startup values" on startup
   Packet_Command = CMD_GET_STARTUP;
