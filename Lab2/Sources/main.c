@@ -130,6 +130,8 @@ int main(void)
   LEDs_Toggle(LED_GREEN);
   LEDs_Toggle(LED_YELLOW);
 
+
+
   volatile uint16union_t *NvTowerNb;
   bool success = Flash_AllocateVar(&NvTowerNb, sizeof(*NvTowerNb));
 
@@ -139,7 +141,14 @@ int main(void)
   volatile uint8_t *NvTowerNb3;
   bool success3 = Flash_AllocateVar(&NvTowerNb3, sizeof(*NvTowerNb3));
 
+
+  bool success4 = Flash_Write16(NvTowerNb, 0x1122);
+  uint8_t s1 = _FB(0x80000);
+  uint16_t s2 = _FH(0x80000);
+  uint32_t s3 = _FW(0x80000);
+  uint64_t s4 = _FP(0x80000);
   //Makes the Packet_Processor function execute "0x04 Special - Get startup values" on startup
+
   Packet_Command = CMD_GET_STARTUP;
   Packet_Processor();
   for (;;)
