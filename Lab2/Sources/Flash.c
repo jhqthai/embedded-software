@@ -1,6 +1,6 @@
 /*
  * Flash.c
- *@brief Routines for erasing and writing to the Flash.
+ *@brief Implementation of routines for erasing and writing to the Flash.
  *
  *  This contains the implementation needed for accessing the internal Flash.
  *  Created on: 12 Apr 2017
@@ -289,10 +289,11 @@ bool Flash_Erase(void){
 	uint32_8union_t flashStart;
 	flashStart.l = FLASH_DATA_START;
 
-	FTFE_FCCOB0 = FCMD_ERSSCR; // defines the FTFE command to erase
-	FTFE_FCCOB1 = flashStart.s.b; // sets flash address[23:16] to 128
-	FTFE_FCCOB2 = flashStart.s.c; // sets flash address[15:8] to 0
-	FTFE_FCCOB3 = (flashStart.s.d & 0xF0); // sets flash address[7:0] to 0
+	FTFE_FCCOB0 = FCMD_ERSSCR; //FCMD Erase sector (p.882 K70RefManual)
+	FTFE_FCCOB1 = flashStart.s.b; //Sets flash address[23:16] to 128
+	FTFE_FCCOB2 = flashStart.s.c; //Sets flash address[15:8] to 0
+	FTFE_FCCOB3 = (flashStart.s.d & 0xF0); //Sets flash address[7:0] to 0
+	
 	//runs command write sequence and returns true/false depending on errors
 	return Execute_CWS();
 
