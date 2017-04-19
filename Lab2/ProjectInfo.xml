@@ -35,48 +35,49 @@
     <FLASHsize>1M</FLASHsize>
   </PROCESSOR>
   <PATHS>
-    <LinkerCommandFile>C:\Users\11990405\Desktop\Lab2_170410\Project_Settings\Linker_Files\ProcessorExpert.ld</LinkerCommandFile>
+    <LinkerCommandFile>C:\Users\11990405\Desktop\Lab2_070418\Project_Settings\Linker_Files\ProcessorExpert.ld</LinkerCommandFile>
     <IncludePaths>
-      <Path>C:\Users\11990405\Desktop\Lab2_170410\Static_Code\PDD\</Path>
-      <Path>C:\Users\11990405\Desktop\Lab2_170410\Static_Code\IO_Map\</Path>
-      <Path>C:\Users\11990405\Desktop\Lab2_170410\Sources\</Path>
-      <Path>C:\Users\11990405\Desktop\Lab2_170410\Generated_Code\</Path>
+      <Path>C:\Users\11990405\Desktop\Lab2_070418\Static_Code\PDD\</Path>
+      <Path>C:\Users\11990405\Desktop\Lab2_070418\Static_Code\IO_Map\</Path>
+      <Path>C:\Users\11990405\Desktop\Lab2_070418\Sources\</Path>
+      <Path>C:\Users\11990405\Desktop\Lab2_070418\Generated_Code\</Path>
     </IncludePaths>
     <SourceCodePaths>
-      <Path>C:\Users\11990405\Desktop\Lab2_170410\Generated_Code\</Path>
-      <Path>C:\Users\11990405\Desktop\Lab2_170410\Project_Settings\Startup_Code\</Path>
-      <Path>C:\Users\11990405\Desktop\Lab2_170410\Sources\</Path>
+      <Path>C:\Users\11990405\Desktop\Lab2_070418\Generated_Code\</Path>
+      <Path>C:\Users\11990405\Desktop\Lab2_070418\Project_Settings\Startup_Code\</Path>
+      <Path>C:\Users\11990405\Desktop\Lab2_070418\Sources\</Path>
     </SourceCodePaths>
   </PATHS>
   <FILES>
     <GeneratedCs>
-      <PathName>C:\Users\11990405\Desktop\Lab2_170410\Generated_Code\Cpu.c</PathName>
-      <PathName>C:\Users\11990405\Desktop\Lab2_170410\Generated_Code\PE_LDD.c</PathName>
-      <PathName>C:\Users\11990405\Desktop\Lab2_170410\Generated_Code\Vectors.c</PathName>
-      <PathName>C:\Users\11990405\Desktop\Lab2_170410\Project_Settings\Startup_Code\startup.c</PathName>
-      <PathName>C:\Users\11990405\Desktop\Lab2_170410\Sources\Events.c</PathName>
-      <PathName>C:\Users\11990405\Desktop\Lab2_170410\Sources\FIFO.c</PathName>
-      <PathName>C:\Users\11990405\Desktop\Lab2_170410\Sources\LEDs.c</PathName>
-      <PathName>C:\Users\11990405\Desktop\Lab2_170410\Sources\UART.c</PathName>
-      <PathName>C:\Users\11990405\Desktop\Lab2_170410\Sources\main.c</PathName>
-      <PathName>C:\Users\11990405\Desktop\Lab2_170410\Sources\packet.c</PathName>
+      <PathName>C:\Users\11990405\Desktop\Lab2_070418\Generated_Code\Cpu.c</PathName>
+      <PathName>C:\Users\11990405\Desktop\Lab2_070418\Generated_Code\PE_LDD.c</PathName>
+      <PathName>C:\Users\11990405\Desktop\Lab2_070418\Generated_Code\Vectors.c</PathName>
+      <PathName>C:\Users\11990405\Desktop\Lab2_070418\Project_Settings\Startup_Code\startup.c</PathName>
+      <PathName>C:\Users\11990405\Desktop\Lab2_070418\Sources\Events.c</PathName>
+      <PathName>C:\Users\11990405\Desktop\Lab2_070418\Sources\FIFO.c</PathName>
+      <PathName>C:\Users\11990405\Desktop\Lab2_070418\Sources\Flash.c</PathName>
+      <PathName>C:\Users\11990405\Desktop\Lab2_070418\Sources\LEDs.c</PathName>
+      <PathName>C:\Users\11990405\Desktop\Lab2_070418\Sources\UART.c</PathName>
+      <PathName>C:\Users\11990405\Desktop\Lab2_070418\Sources\main.c</PathName>
+      <PathName>C:\Users\11990405\Desktop\Lab2_070418\Sources\packet.c</PathName>
     </GeneratedCs>
     <GeneratedHs>
-      <PathName>C:\Users\11990405\Desktop\Lab2_170410\Generated_Code\Cpu.h</PathName>
-      <PathName>C:\Users\11990405\Desktop\Lab2_170410\Generated_Code\IO_Map.h</PathName>
-      <PathName>C:\Users\11990405\Desktop\Lab2_170410\Generated_Code\PE_Const.h</PathName>
-      <PathName>C:\Users\11990405\Desktop\Lab2_170410\Generated_Code\PE_Error.h</PathName>
-      <PathName>C:\Users\11990405\Desktop\Lab2_170410\Generated_Code\PE_LDD.h</PathName>
-      <PathName>C:\Users\11990405\Desktop\Lab2_170410\Generated_Code\PE_Types.h</PathName>
-      <PathName>C:\Users\11990405\Desktop\Lab2_170410\Sources\Events.h</PathName>
-      <PathName>C:\Users\11990405\Desktop\Lab2_170410\Sources\FIFO.h</PathName>
-      <PathName>C:\Users\11990405\Desktop\Lab2_170410\Sources\Flash.h</PathName>
-      <PathName>C:\Users\11990405\Desktop\Lab2_170410\Sources\LEDs.h</PathName>
-      <PathName>C:\Users\11990405\Desktop\Lab2_170410\Sources\UART.h</PathName>
-      <PathName>C:\Users\11990405\Desktop\Lab2_170410\Sources\packet.h</PathName>
-      <PathName>C:\Users\11990405\Desktop\Lab2_170410\Sources\types.h</PathName>
-      <PathName>C:\Users\11990405\Desktop\Lab2_170410\Static_Code\IO_Map\MK70F12.h</PathName>
-      <PathName>C:\Users\11990405\Desktop\Lab2_170410\Static_Code\PDD\PDD_Types.h</PathName>
+      <PathName>C:\Users\11990405\Desktop\Lab2_070418\Generated_Code\Cpu.h</PathName>
+      <PathName>C:\Users\11990405\Desktop\Lab2_070418\Generated_Code\IO_Map.h</PathName>
+      <PathName>C:\Users\11990405\Desktop\Lab2_070418\Generated_Code\PE_Const.h</PathName>
+      <PathName>C:\Users\11990405\Desktop\Lab2_070418\Generated_Code\PE_Error.h</PathName>
+      <PathName>C:\Users\11990405\Desktop\Lab2_070418\Generated_Code\PE_LDD.h</PathName>
+      <PathName>C:\Users\11990405\Desktop\Lab2_070418\Generated_Code\PE_Types.h</PathName>
+      <PathName>C:\Users\11990405\Desktop\Lab2_070418\Sources\Events.h</PathName>
+      <PathName>C:\Users\11990405\Desktop\Lab2_070418\Sources\FIFO.h</PathName>
+      <PathName>C:\Users\11990405\Desktop\Lab2_070418\Sources\Flash.h</PathName>
+      <PathName>C:\Users\11990405\Desktop\Lab2_070418\Sources\LEDs.h</PathName>
+      <PathName>C:\Users\11990405\Desktop\Lab2_070418\Sources\UART.h</PathName>
+      <PathName>C:\Users\11990405\Desktop\Lab2_070418\Sources\packet.h</PathName>
+      <PathName>C:\Users\11990405\Desktop\Lab2_070418\Sources\types.h</PathName>
+      <PathName>C:\Users\11990405\Desktop\Lab2_070418\Static_Code\IO_Map\MK70F12.h</PathName>
+      <PathName>C:\Users\11990405\Desktop\Lab2_070418\Static_Code\PDD\PDD_Types.h</PathName>
     </GeneratedHs>
   </FILES>
   <OPTIONS>

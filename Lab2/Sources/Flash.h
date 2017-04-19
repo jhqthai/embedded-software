@@ -4,12 +4,18 @@
  *
  *  This contains the functions needed for accessing the internal Flash.
  *
- *  @author PMcL
- *  @date 2015-08-07
+ * @author John Thai & Jason Garviel
+ * @date 2017-04-12
  */
+/*!
+ * @addtogroup Flash_module Flash module documentation
+ * @{
+ */  
 
 #ifndef FLASH_H
 #define FLASH_H
+/* MODULE Flash */
+
 
 // new types
 #include "types.h"
@@ -81,3 +87,7 @@ bool Flash_Write8(volatile uint8_t* const address, const uint8_t data);
 bool Flash_Erase(void);
 
 #endif
+
+/*!
+** @}
+*/

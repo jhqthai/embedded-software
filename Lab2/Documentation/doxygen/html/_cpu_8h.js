@@ -22,6 +22,7 @@ var _cpu_8h =
     [ "CPU_PARTNUM_MK70FN1M0VMJ12", "group___cpu__module.html#ga4fcc1df1d7918b17e6f8af2228b9a1c4", null ],
     [ "CPU_PLL_FLL_CLK_HZ_CONFIG_0", "group___cpu__module.html#gad2aaa2918b640ae3833fc84e8f983c3c", null ],
     [ "CPU_USB_CLK_HZ_CONFIG_0", "group___cpu__module.html#ga7bf843fdf59af5fcaf48bea898884a3e", null ],
+    [ "CPU_XTAL_CLK_HZ", "group___cpu__module.html#gacf80ae1c70da6f1932185345fb089ce2", null ],
     [ "PEcfg_FLASH", "group___cpu__module.html#gae2f84b335ab99b9e98d41e8a530b1540", null ],
     [ "tIsrFunc", "group___cpu__module.html#gafea04d3e8135767c03ce099f02e97437", null ],
     [ "__init_hardware", "group___cpu__module.html#ga32a8d86789a3326b3120bf1e1c1d4252", null ],

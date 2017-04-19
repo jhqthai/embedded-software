@@ -4,12 +4,18 @@
  *
  *  This contains the structure and "methods" for accessing a byte-wide FIFO.
  *
- *  @author PMcL
- *  @date 2015-07-23
+ *  @author John Thai & Jason Garviel
+ *  @date 2017-04-18
  */
+/*!
+**  @addtogroup FIfO_module FIFO module documentation
+**  @{
+*/  
 
 #ifndef FIFO_H
 #define FIFO_H
+/* MODULE FIFO */
+
 
 // new types
 #include "types.h"
@@ -54,3 +60,7 @@ bool FIFO_Put(TFIFO * const FIFO, const uint8_t data);
 bool FIFO_Get(TFIFO * const FIFO, uint8_t volatile * const dataPtr);
 
 #endif
+
+/*!
+** @}
+*/

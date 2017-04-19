@@ -1,12 +1,18 @@
 /*! @file
  *
- *  @brief I/O routines for UART communications on the TWR-K70F120M.
+ *  @brief I/O implementation for UART communications on the TWR-K70F120M.
  *
- *  This contains the functions for operating the UART (serial port).
+ *  This contains implementation of functions for operating the UART (serial port).
  *
  *  @author John Thai & Jason Gavriel
- *  @date 2017-xx-xx
+ *  @date 2017-04-05
  */
+/*!
+ * @addtogroup UART_module UART module documentation
+ * @{
+ */
+/* MODULE UART */
+
 
 #include "FIFO.h"
 #include "UART.h"
@@ -17,7 +23,12 @@
 static TFIFO RxFIFO;
 static TFIFO TxFIFO;
 
-//Initialises the registers needed to enable UART, pin and peripheral function and to setup correct baud rate
+/*! @brief Initialises the registers needed to enable UART, pin and peripheral function and to setup correct baud rate.
+ *
+ *  @param baudRate The desired baud rate in bits/sec.
+ *  @param moduleClk The module clock rate in Hz.
+ *  @return bool - TRUE if the UART was successfully initialized.
+ */
 bool UART_Init(const uint32_t baudRate, const uint32_t moduleClk)
 {
   //Enable UART2 Module
@@ -64,20 +75,32 @@ bool UART_Init(const uint32_t baudRate, const uint32_t moduleClk)
   
 }
 
-
-//Used by tower to receive a character from RxFIFO
+/*! @brief Used by tower to receive a character from RxFIFO.
+ *
+ *  @param dataPtr A pointer to memory to store the retrieved byte.
+ *  @return bool - TRUE if the receive FIFO returned a character.
+ *  @note Assumes that UART_Init has been called.
+ */
 bool UART_InChar(uint8_t * const dataPtr)
 {
   return FIFO_Get(&RxFIFO, dataPtr);
 }
 
-//Used by tower to transmit a character to TxFIFO
+/*! @brief Used by tower to transmit a character to TxFIFO.
+ *
+ *  @param data The byte to be placed in the transmit FIFO.
+ *  @return bool - TRUE if the data was placed in the transmit FIFO.
+ *  @note Assumes that UART_Init has been called.
+ */
 bool UART_OutChar(const uint8_t data)
 {
   return FIFO_Put(&TxFIFO, data);
 }
 
-//Checks to see if there is a char to read from or write to the relevant FIFO
+/*! @brief Checks to see if there is a char to read from or write to the relevant FIFO.
+ *
+ *  @return void
+ */
 void UART_Poll(void)
 {
   //Checks UART2_S1 "TDRE" bit -> 1 indicates we should read TxFIFO and write to UART_D
@@ -88,5 +111,9 @@ void UART_Poll(void)
   if (UART2_S1 & UART_S1_RDRF_MASK)
     FIFO_Put(&RxFIFO, UART2_D);
 }
+
+/*!
+** @}
+*/
 
 

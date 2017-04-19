@@ -4,12 +4,17 @@
  *
  *  This contains types that are especially useful for the Tower to PC Protocol.
  *
- *  @author PMcL
- *  @date 2015-07-23
+ *  @author John Thai & Jason Gavriel
+ *  @date 2017-04-05
+ */
+/*!
+ * @addtogroup Types_module Packet module documentation
+ * @{
  */
 
 #ifndef TYPES_H
 #define TYPES_H
+/* MODULE Type */
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -82,3 +87,7 @@ typedef union
 } TFloat;
 
 #endif
+
+/*!
+** @}
+*/

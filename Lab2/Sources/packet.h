@@ -7,9 +7,14 @@
  *  @author PMcL
  *  @date 2015-07-23
  */
+/*!
+ * @addtogroup Packet_module Packet module documentation
+ * @{
+ */
 
 #ifndef PACKET_H
 #define PACKET_H
+/* MODULE Packet */
 
 // New types
 #include "types.h"
@@ -85,3 +90,7 @@ bool Packet_Get(void);
 bool Packet_Put(const uint8_t command, const uint8_t parameter1, const uint8_t parameter2, const uint8_t parameter3);
 
 #endif
+
+/*!
+** @}
+*/

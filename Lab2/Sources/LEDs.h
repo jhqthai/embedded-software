@@ -1,15 +1,20 @@
 /*! @file
  *
- *  @brief Routines to access the LEDs on the TWR-K70F120M.
+ * @brief Routines to access the LEDs on the TWR-K70F120M.
  *
- *  This contains the functions for operating the LEDs.
+ * This contains the functions for operating the LEDs.
  *
- *  @author PMcL
- *  @date 2015-08-15
+ * @author PMcL
+ * @date 2015-08-15
+ */
+/*!
+ * @addtogroup LED_module LED module documentation
+ * @{
  */
 
 #ifndef LEDS_H
 #define LEDS_H
+/* MODULE LED */
 
 // new types
 #include "types.h"
@@ -53,3 +58,8 @@ void LEDs_Off(const TLED color);
 void LEDs_Toggle(const TLED color);
 
 #endif
+
+/*!
+** @}
+*/
+

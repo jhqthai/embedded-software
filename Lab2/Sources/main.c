@@ -41,9 +41,20 @@
 #include "Flash.h"
 
 // Defining constants
-#define CMD_GET_STARTUP 0x04
-#define CMD_SPECIAL_GET_VER 0x09
+#define BAUD_RATE 115200
+#define CMD_SGET_STARTUP 0x04
+#define CMD_SGET_VERSION 0x09
 #define CMD_TOWER_NUMBER 0x0B
+#define CMD_TOWER_MODE 0x0D
+#define CMD_FPROGRAM_BYTE 0x07
+#define CMD_FREAD_BYTE 0x08
+
+// Global variables
+static volatile uint8_t *Write8;
+static uint16union_t volatile *NvTowerNb;
+static uint16union_t volatile *NvTowerMd;
+
+
 
 /*! Reads the command byte and processes relevant functionality
  *  Also handles ACKing and NAKing
@@ -53,41 +64,109 @@
 bool Packet_Processor(void)
 {
   bool success;
-  // Gets the command byte of packet. Sets most significant bit to 0 to get command regardless of ACK enabled/disabled
+
+  //Gets the command byte of packet. Sets most significant bit to 0 to get command regardless of ACK enabled/disabled
   switch (Packet_Command & ~PACKET_ACK_MASK)
   {
-    case CMD_GET_STARTUP: // Case Special - Get startup values
+		//Case Special - Get startup values
+    case CMD_SGET_STARTUP:
       if ((Packet_Parameter1 | Packet_Parameter2 | Packet_Parameter3) == 0)
       {
-        Packet_Put(CMD_GET_STARTUP, 0x0, 0x0, 0x0);
-        Packet_Put(CMD_SPECIAL_GET_VER, 0x76, 0x01, 0x00);
-        Packet_Put(CMD_TOWER_NUMBER, 0x01, 0xF1, 0x05);
+        Packet_Put(CMD_SGET_STARTUP, 0x0, 0x0, 0x0);
+        Packet_Put(CMD_SGET_VERSION, 0x76, 0x02, 0x00);
+        Packet_Put(CMD_TOWER_NUMBER, 0x01, NvTowerNb->s.Lo, NvTowerNb->s.Hi);
+        Packet_Put(CMD_TOWER_MODE, 0x01, NvTowerMd->s.Lo, NvTowerMd->s.Hi);
         success = true;
       }
       else
         success = false;
       break;
-    case CMD_SPECIAL_GET_VER: // Case Special - Get version
+
+    //Case Special - Get version
+    case CMD_SGET_VERSION:
       if ((Packet_Parameter1 == 0x76) & (Packet_Parameter2 == 0x78) & (Packet_Parameter3 == 0x0D))
       {
-        Packet_Put(CMD_SPECIAL_GET_VER, 0x76, 0x01, 0x00);
+        Packet_Put(CMD_SGET_VERSION, 0x76, 0x02, 0x00);
         success = true;
       }
       else
         success = false;
       break;
-    case CMD_TOWER_NUMBER: // Case Tower number (get & set)
+
+    //Case Tower number (get & set)
+    case CMD_TOWER_NUMBER:
+
+    	//Gets tower number and sends to PC
+      if ((Packet_Parameter1 == 0x01) & (Packet_Parameter2 == 0x00) & (Packet_Parameter3 == 0x00))
+        success = Packet_Put(CMD_TOWER_NUMBER, 0x01, NvTowerNb->s.Lo, NvTowerNb->s.Hi);
+
+      //Set incoming bytes to flash address of tower number
+      else if ((Packet_Parameter1 == 0x02))
+      {
+      	success = Flash_Write16((uint16_t*)NvTowerNb, Packet_Parameter23);
+				Packet_Put(CMD_TOWER_NUMBER, 0x01, NvTowerNb->s.Lo, NvTowerNb->s.Hi);
+      }
+			else
+        success = false;
+      break;
+
+    //Case Tower Mode (get & set)
+    case CMD_TOWER_MODE:
+
+    	//Get tower mode
       if ((Packet_Parameter1 == 0x01) & (Packet_Parameter2 == 0x00) & (Packet_Parameter3 == 0x00))
       {
-        Packet_Put(CMD_TOWER_NUMBER, 0x01, 0xF1, 0x05);
-        success = true;
+      	Packet_Put(CMD_TOWER_MODE, 0x01, NvTowerMd->s.Lo, NvTowerMd->s.Hi); //
+      	success = true;
       }
-      else
-        success = false;
+
+      //Set tower mode
+      else if ((Packet_Parameter1 == 0x02))
+      {
+      	success =  Flash_Write16((uint16_t*)NvTowerMd, Packet_Parameter23);
+				Packet_Put(CMD_TOWER_MODE, 0x01, NvTowerMd->s.Lo, NvTowerMd->s.Hi);
+      }
+			else
+	    success = false;
       break;
+
+    //Case Flash Program Byte
+    case CMD_FPROGRAM_BYTE:
+
+    	//Check offset validity to write byte
+			if ((0x00 <= Packet_Parameter1 < 0x08) & (Packet_Parameter2 == 0x00))
+			{
+				uint8_t  *cmdByte;
+				cmdByte =  (uint8_t *)(FLASH_DATA_START + Packet_Parameter1);
+				success = Flash_Write8(cmdByte, Packet_Parameter3);
+			}
+
+			//Erase flash for offset of 8
+			else if (Packet_Parameter1 == 0x08)
+			{
+				success = Flash_Erase();
+			}
+			else
+				success = false;
+			break;
+
+		// Case Flash Read Byte
+    case CMD_FREAD_BYTE:
+
+	  // Check offset validity
+	  if ((0x00 <= Packet_Parameter1 < 0x07) & (Packet_Parameter2 == 0x00) & (Packet_Parameter3 == 0x00))
+	  {
+	  	uint8_t rByte = _FB(FLASH_DATA_START + Packet_Parameter1); // Read data from appropriate location
+	  	success = Packet_Put(CMD_FREAD_BYTE, Packet_Parameter1, 0x00, rByte);
+	  }
+	  else
+	  	success = false;
+			break;
+
     default:
       success = false;
   }
+
   // Check if packet acknowledgment enabled
   if ((Packet_Command >= PACKET_ACK_MASK))
   {
@@ -105,6 +184,8 @@ bool Packet_Processor(void)
     }
   }
 }
+ 
+ 
 
 /*lint -save  -e970 Disable MISRA rule (6.3) checking. */
 int main(void)
@@ -114,50 +195,50 @@ int main(void)
 
   /*** Processor Expert internal initialization. DON'T REMOVE THIS CODE!!! ***/
   PE_low_level_init();
-  // uart init(baud rate, something else);
   /*** End of Processor Expert internal initialization.                    ***/
 
   /* Write your code here */
-  Packet_Init(38400, CPU_BUS_CLK_HZ);
+  //Init Packet
+  bool packInit = Packet_Init(BAUD_RATE, CPU_BUS_CLK_HZ);
 
-  //init LEDs
-  LEDs_Init();
-  LEDs_On(LED_BLUE);
-  LEDs_Off(LED_BLUE);
-  LEDs_Toggle(LED_BLUE);
-  LEDs_Toggle(LED_YELLOW);
-  LEDs_Toggle(LED_ORANGE);
-  LEDs_Toggle(LED_GREEN);
-  LEDs_Toggle(LED_YELLOW);
+  //Init LEDs
+  bool LEDsInit = LEDs_Init();
+  
+  //Init Flash
+  bool flashInit = Flash_Init();
 
+  //Turn LED on if tower init successful
+  if (packInit && LEDsInit && flashInit)
+    LEDs_On(LED_ORANGE);
 
-
-  volatile uint16union_t *NvTowerNb;
-  bool success = Flash_AllocateVar(&NvTowerNb, sizeof(*NvTowerNb));
-
-  volatile uint32union_t *NvTowerNb2;
-  bool success2 = Flash_AllocateVar(&NvTowerNb2, sizeof(*NvTowerNb2));
-
-  volatile uint8_t *NvTowerNb3;
-  bool success3 = Flash_AllocateVar(&NvTowerNb3, sizeof(*NvTowerNb3));
-
-
-  bool success4 = Flash_Write16(NvTowerNb, 0x1122);
-  uint8_t s1 = _FB(0x80000);
-  uint16_t s2 = _FH(0x80000);
-  uint32_t s3 = _FW(0x80000);
-  uint64_t s4 = _FP(0x80000);
+  // Allocate flash addresses for tower number and mode
+  bool allocTowerNB = Flash_AllocateVar((void*)&NvTowerNb, sizeof(*NvTowerNb));
+  bool allocTowerMd = Flash_AllocateVar((void*)&NvTowerMd, sizeof(*NvTowerMd));
+  
+	if (allocTowerNB && allocTowerMd)
+	{
+		if (NvTowerNb->l == 0xFFFF) //Checks if tower number has been set
+		{
+			Flash_Write16((uint16_t *)NvTowerNb, 0x05F1); //If not, sets it
+		}
+		if (NvTowerMd->l == 0xFFFF) //Checks if tower mode has been set
+		{
+			Flash_Write16((uint16_t *)NvTowerMd, 0x0001); //If not, sets it
+		}
+	}
+	
   //Makes the Packet_Processor function execute "0x04 Special - Get startup values" on startup
-
-  Packet_Command = CMD_GET_STARTUP;
+  Packet_Command = CMD_SGET_STARTUP;
   Packet_Processor();
+
   for (;;)
   {
-    // Check the status of UART hardware
+    //Check the status of UART hardware
     UART_Poll();
-    // If a valid packet is received
+
+    //If a valid packet is received
     if (Packet_Get())
-      Packet_Processor(); // Handle packet according to the command byte
+      Packet_Processor(); //Handle packet according to the command byte
   }
 
   /*** Don't write any code pass this line, or it will be deleted during code generation. ***/

@@ -19,6 +19,9 @@
 ** @brief
 **         This is user's event module.
 **         Put your event handler code here.
+ *
+ *  @author John Thai & Jason Gavriel
+ *  @date 2017-04-18
 */         
 /*!
 **  @addtogroup Events_module Events module documentation
