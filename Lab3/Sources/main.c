@@ -239,11 +239,7 @@ int main(void)
   __EI();
   for (;;)
   {
-<<<<<<< HEAD
   	//If a valid packet is received
-=======
-    //If a valid packet is received
->>>>>>> 987445dd20c7298a9fa962b0059b0d638d9c657d
     if (Packet_Get())
       Packet_Processor(); //Handle packet according to the command byte
   }
