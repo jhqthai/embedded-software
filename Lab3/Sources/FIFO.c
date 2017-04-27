@@ -8,7 +8,7 @@
  *  @date 2017-04-24
  */
 /*!
-**  @addtogroup FIfO_module FIFO module documentation
+**  @addtogroup FIFO_module FIFO module documentation
 **  @{
 */  
 /* MODULE FIFO */
@@ -16,6 +16,7 @@
 
 #include "FIFO.h"
 #include "types.h"
+#include "CPU.h"
 
 
 /*! @brief Initialises the FIFO to starting values.

@@ -7,9 +7,14 @@
  *  @author PMcL
  *  @date 2015-07-23
  */
+/*!
+**  @addtogroup FIFO_module FIFO module documentation
+**  @{
+*/
 
 #ifndef FIFO_H
 #define FIFO_H
+/* MODULE FIFO */
 
 // new types
 #include "types.h"
@@ -54,3 +59,7 @@ bool FIFO_Put(TFIFO* const FIFO, const uint8_t data);
 bool FIFO_Get(TFIFO* const FIFO, uint8_t volatile* const dataPtr);
 
 #endif
+
+/*!
+** @}
+*/

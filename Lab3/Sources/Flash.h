@@ -7,7 +7,11 @@
  *  @author PMcL
  *  @date 2015-08-07
  */
-
+/*!
+ * @addtogroup Flash_module Flash module documentation
+ * @{
+ */
+/* MODULE Flash */
 #ifndef FLASH_H
 #define FLASH_H
 
@@ -81,3 +85,8 @@ bool Flash_Write8(volatile uint8_t* const address, const uint8_t data);
 bool Flash_Erase(void);
 
 #endif
+
+/*!
+** @}
+*/
+

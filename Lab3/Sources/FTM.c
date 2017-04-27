@@ -1,67 +1,29 @@
-/*! @file
+/*
+ * FTM.c
+ *  @brief Implementation of routines for setting up the FlexTimer module (FTM) on the TWR-K70F120M.
  *
- *  @brief Routines for setting up the FlexTimer module (FTM) on the TWR-K70F120M.
+ *  This contains the function definition for operating the FlexTimer module (FTM).
  *
- *  This contains the functions for operating the FlexTimer module (FTM).
- *
- *  @author PMcL
- *  @date 2015-09-04
+ *  @author John Thai & Jason Garviel
+ *  @date 2017-04-27
  */
 /*!
  *  @addtogroup FTM_module FTM module documentation
  *  @{
  */
-
-#ifndef FTM_H
-#define FTM_H
 /* MODULE FTM */
 
-// new types
-#include "types.h"
-
-typedef enum
-{
-  TIMER_FUNCTION_INPUT_CAPTURE,
-  TIMER_FUNCTION_OUTPUT_COMPARE
-} TTimerFunction;
-
-typedef enum
-{
-  TIMER_OUTPUT_DISCONNECT,
-  TIMER_OUTPUT_TOGGLE,
-  TIMER_OUTPUT_LOW,
-  TIMER_OUTPUT_HIGH
-} TTimerOutputAction;
-
-typedef enum
-{
-  TIMER_INPUT_OFF,
-  TIMER_INPUT_RISING,
-  TIMER_INPUT_FALLING,
-  TIMER_INPUT_ANY
-} TTimerInputDetection;
-
-typedef struct
-{
-  uint8_t channelNb;
-  uint16_t delayCount;
-  TTimerFunction timerFunction;
-  union
-  {
-    TTimerOutputAction outputAction;
-    TTimerInputDetection inputDetection;
-  } ioType;
-  void (*userFunction)(void*);
-  void *userArguments;
-} TFTMChannel;
-
+#include "FTM.h"
 
 /*! @brief Sets up the FTM before first use.
  *
  *  Enables the FTM as a free running 16-bit counter.
  *  @return bool - TRUE if the FTM was successfully initialized.
  */
-bool FTM_Init();
+bool FTM_Init()
+{
+
+}
 
 /*! @brief Sets up a timer channel.
  *
@@ -77,7 +39,10 @@ bool FTM_Init();
  *  @return bool - TRUE if the timer was set up successfully.
  *  @note Assumes the FTM has been initialized.
  */
-bool FTM_Set(const TFTMChannel* const aFTMChannel);
+bool FTM_Set(const TFTMChannel* const aFTMChannel)
+{
+
+}
 
 
 /*! @brief Starts a timer if set up for output compare.
@@ -86,7 +51,10 @@ bool FTM_Set(const TFTMChannel* const aFTMChannel);
  *  @return bool - TRUE if the timer was started successfully.
  *  @note Assumes the FTM has been initialized.
  */
-bool FTM_StartTimer(const TFTMChannel* const aFTMChannel);
+bool FTM_StartTimer(const TFTMChannel* const aFTMChannel)
+{
+
+}
 
 
 /*! @brief Interrupt service routine for the FTM.
@@ -94,9 +62,10 @@ bool FTM_StartTimer(const TFTMChannel* const aFTMChannel);
  *  If a timer channel was set up as output compare, then the user callback function will be called.
  *  @note Assumes the FTM has been initialized.
  */
-void __attribute__ ((interrupt)) FTM0_ISR(void);
+void __attribute__ ((interrupt)) FTM0_ISR(void)
+{
 
-#endif
+}
 
 /*!
 ** @}

@@ -199,6 +199,10 @@ int main(void)
   /*** End of Processor Expert internal initialization.                    ***/
 
   /* Write your code here */
+
+  //Disable Interrupt
+  __DI();
+
   //Init Packet
   bool packInit = Packet_Init(BAUD_RATE, CPU_BUS_CLK_HZ);
 
@@ -235,10 +239,7 @@ int main(void)
   __EI();
   for (;;)
   {
-    //Check the status of UART hardware
-    //UART_Poll();
-
-    //If a valid packet is received
+  	//If a valid packet is received
     if (Packet_Get())
       Packet_Processor(); //Handle packet according to the command byte
   }
