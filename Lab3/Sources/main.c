@@ -232,10 +232,11 @@ int main(void)
   Packet_Command = CMD_SGET_STARTUP;
   Packet_Processor();
 
+  __EI();
   for (;;)
   {
     //Check the status of UART hardware
-    UART_Poll();
+    //UART_Poll();
 
     //If a valid packet is received
     if (Packet_Get())
