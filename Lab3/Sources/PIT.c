@@ -27,6 +27,14 @@
  */
 bool PIT_Init(const uint32_t moduleClk, void (*userFunction)(void*), void* userArguments)
 {
+	SIM_SCGC6 |= SIM_SCGC6_PIT_MASK; // Enable PIT SCGC
+	
+	// Dont think MDIS mask need to be enable since that will disble shit
+	//PIT_MCR |= PIT_MCR_MDIS_MASK
+	
+	PIT_MCR |= PIT_MCR_FRZ_MASK; // Enable timer freeze when debug
+	
+	
 
 }
 
@@ -39,6 +47,9 @@ bool PIT_Init(const uint32_t moduleClk, void (*userFunction)(void*), void* userA
  */
 void PIT_Set(const uint32_t period, const bool restart)
 {
+	PIT_LDVAL1 = 0x0003E7FF; // Set up timer for x cycles (cycles = interrupt period/clock period)
+	PIT_TCTRL1 = TIE; // enable Timer 1 interrupts
+	PIT_TCTRL1 |= TEN; // start Timer 1
 
 }
 
