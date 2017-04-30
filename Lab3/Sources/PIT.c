@@ -15,6 +15,11 @@
 /* MODULE PIT */
 
 #include "PIT.h"
+#include "MK70F12.h"
+
+static uint32_t PITModuleClk; // Module clock rate in HZ
+static void (*PITCallback)(void*); // User callback function pointer
+static void* PITArguments; // User arguments pointer to use with user callback function
 
 /*! @brief Sets up the PIT before first use.
  *
@@ -27,15 +32,32 @@
  */
 bool PIT_Init(const uint32_t moduleClk, void (*userFunction)(void*), void* userArguments)
 {
-	SIM_SCGC6 |= SIM_SCGC6_PIT_MASK; // Enable PIT SCGC
-	
-	// Dont think MDIS mask need to be enable since that will disble shit
-	//PIT_MCR |= PIT_MCR_MDIS_MASK
-	
-	PIT_MCR |= PIT_MCR_FRZ_MASK; // Enable timer freeze when debug
-	
-	
+	PITModuleClk = moduleClk;
+	PITCallback = userFunction;
+	PITArguments = userArguments;
 
+	// Enable PIT SCGC
+	SIM_SCGC6 |= SIM_SCGC6_PIT_MASK;
+	
+	// Enable PIT timer clock by clearing bit 0
+	PIT_MCR &= ~PIT_MCR_MDIS_MASK;
+	
+	// Enable freeze when debug by setting bit 1
+	PIT_MCR |= PIT_MCR_FRZ_MASK;
+	
+	// Enable Timer0 interrupt
+	PIT_TCTRL0 = PIT_TCTRL_TIE_MASK;
+	
+  // Initialize NVIC
+  // see p. 91 of K70P256M150SF3RM.pdf
+  // Vector 0x41=65, IRQ=68
+  // NVIC non-IPR=2 IPR=12
+  // Clear any pending interrupts on LPTMR
+  NVICICPR2 = (1 << 4); //IRQ mod 32 (p.92 K70)
+  // Enable interrupts from LPTMR module
+  NVICISER2 = (1 << 4);
+
+	return true;
 }
 
 /*! @brief Sets the value of the desired period of the PIT.
@@ -47,10 +69,19 @@ bool PIT_Init(const uint32_t moduleClk, void (*userFunction)(void*), void* userA
  */
 void PIT_Set(const uint32_t period, const bool restart)
 {
-	PIT_LDVAL1 = 0x0003E7FF; // Set up timer for x cycles (cycles = interrupt period/clock period)
-	PIT_TCTRL1 = TIE; // enable Timer 1 interrupts
-	PIT_TCTRL1 |= TEN; // start Timer 1
+	// Clock period (ns) = 1/module clock rate (MHZ)
+	// Clock cycles = interrupt period/clock period
+	// LDVAL trigger = clock cycles - 1
+	uint32_t triggerLDVAL = (period/(1/PITModuleClk*1e6))- 1;
 
+	if (restart)
+	{
+		PIT_Enable(false);
+		PIT_LDVAL0 = PIT_LDVAL_TSV(triggerLDVAL); // Set up timer for triggerLDVAL clock cycles
+		PIT_Enable(true);
+	}
+	else
+		PIT_LDVAL0 = PIT_LDVAL_TSV(triggerLDVAL);
 }
 
 /*! @brief Enables or disables the PIT.
@@ -59,7 +90,10 @@ void PIT_Set(const uint32_t period, const bool restart)
  */
 void PIT_Enable(const bool enable)
 {
-
+	if (enable)
+		PIT_TCTRL0 |= PIT_TCTRL_TEN_MASK; // Enable PIT
+	else
+		PIT_TCTRL0 &= ~PIT_TCTRL_TEN_MASK; // Disable PIT
 }
 
 /*! @brief Interrupt service routine for the PIT.
@@ -70,7 +104,10 @@ void PIT_Enable(const bool enable)
  */
 void __attribute__ ((interrupt)) PIT_ISR(void)
 {
-
+	//PIT_TFLG0 |= PIT_TFLG_TIF_MASK; // Timeout
+	//(PITCallback)(PITArguments); //NOTSURE!!!
+	if (PITCallback)
+		(*PITCallback)(PITArguments);
 }
 
 

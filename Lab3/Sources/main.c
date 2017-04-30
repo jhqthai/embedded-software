@@ -39,6 +39,7 @@
 #include "packet.h"
 #include "LEDs.h"
 #include "Flash.h"
+#include "PIT.h"
 
 // Defining constants
 #define CMD_SGET_STARTUP 0x04
@@ -187,6 +188,17 @@ bool Packet_Processor(void)
 }
 
 
+// User callback function?
+void PITCallback(void* arg)
+{
+	// Clear flag by set bit to 1
+  PIT_TFLG0 |= PIT_TFLG_TIF_MASK;
+
+  // Wait for the PIT interrupt flag to clear ????
+  while (PIT_TFLG0)
+    ;
+  LEDs_Toggle(LED_GREEN);
+}
 
 /*lint -save  -e970 Disable MISRA rule (6.3) checking. */
 int main(void)

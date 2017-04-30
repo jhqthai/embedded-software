@@ -17,6 +17,7 @@
 #include "FIFO.h"
 #include "types.h"
 #include "CPU.h"
+#include "PE_Types.h"
 
 
 /*! @brief Initialises the FIFO to starting values.
