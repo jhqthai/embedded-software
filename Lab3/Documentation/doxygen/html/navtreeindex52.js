@@ -1,5 +1,10 @@
 var NAVTREEINDEX52 =
 {
+"group___p_o_r_t___register___accessor___macros.html#ga1afd5cfc6839a823d869a83912591e5f":[4,0,2,0,0,9742],
+"group___p_o_r_t___register___accessor___macros.html#ga1b7509bbf10e73bcfb5f5d4b8ea0e822":[4,0,2,0,0,9682],
+"group___p_o_r_t___register___accessor___macros.html#ga1d493f6e8d2939b06c057a0924798f64":[4,0,2,0,0,9650],
+"group___p_o_r_t___register___accessor___macros.html#ga1dc4e1ae5189bee16746bd977599b628":[4,0,2,0,0,9719],
+"group___p_o_r_t___register___accessor___macros.html#ga1e03b232aa4c04222b5e0407d237d9f3":[4,0,2,0,0,9642],
 "group___p_o_r_t___register___accessor___macros.html#ga1f031f13981b411667481171931bbdd1":[4,0,2,0,0,9589],
 "group___p_o_r_t___register___accessor___macros.html#ga1f8a12588f10b6a807f6b25033362adc":[4,0,2,0,0,9760],
 "group___p_o_r_t___register___accessor___macros.html#ga2278b13f4a1532887963a0fd10278be4":[4,0,2,0,0,9669],
@@ -203,7 +208,7 @@ var NAVTREEINDEX52 =
 "group___p_o_r_t___register___accessor___macros.html#gafc129a78d36fd096cbf356ddabc9381b":[4,0,2,0,0,9683],
 "group___p_o_r_t___register___accessor___macros.html#gafd185b927c36db8b675dc463d1e9ee3f":[4,0,2,0,0,9687],
 "group___p_o_r_t___register___accessor___macros.html#gafea3abf97f2655185563ffd41bbfbb98":[4,0,2,0,0,9779],
-"group___p_o_r_t___register___masks.html":[2,8,42,1],
+"group___p_o_r_t___register___masks.html":[2,18,42,1],
 "group___p_o_r_t___register___masks.html#ga00ae08038ade5432d0240666658d8867":[4,0,2,0,0,9535],
 "group___p_o_r_t___register___masks.html#ga075e53298ec26cb1b463c95b902c39c1":[4,0,2,0,0,9552],
 "group___p_o_r_t___register___masks.html#ga0bda43cd85ca4d5df17f12a193937d81":[4,0,2,0,0,9538],
@@ -244,10 +249,5 @@ var NAVTREEINDEX52 =
 "group___p_o_r_t___register___masks.html#gad20ae957ec775096862e8a6542463e03":[4,0,2,0,0,9543],
 "group___p_o_r_t___register___masks.html#gad657e805a001c463d29fc307ecd4103e":[4,0,2,0,0,9512],
 "group___p_o_r_t___register___masks.html#gadbd5b173d13c0766ed34cb90095ba789":[4,0,2,0,0,9536],
-"group___p_o_r_t___register___masks.html#gadc66969dfb648b725cd30df406f7a2f9":[4,0,2,0,0,9505],
-"group___p_o_r_t___register___masks.html#gae1c37b9f66e58bd80e7764232fd05cee":[4,0,2,0,0,9534],
-"group___p_o_r_t___register___masks.html#gae7d057ebd3218784fca57f55a85f2d29":[4,0,2,0,0,9551],
-"group___p_o_r_t___register___masks.html#gae9cf8d5289e6249274584e60f984663b":[4,0,2,0,0,9519],
-"group___p_o_r_t___register___masks.html#gaf2f0bbe1dea504156dce840fdcb94b74":[4,0,2,0,0,9513],
-"group___peripheral__defines.html":[2,8]
+"group___p_o_r_t___register___masks.html#gadc66969dfb648b725cd30df406f7a2f9":[4,0,2,0,0,9505]
 };

@@ -14,57 +14,115 @@
 /* MODULE FTM */
 
 #include "FTM.h"
+#include "MK70F12.h"
 
-/*! @brief Sets up the FTM before first use.
- *
- *  Enables the FTM as a free running 16-bit counter.
- *  @return bool - TRUE if the FTM was successfully initialized.
- */
+
+#define MCGFFCLK 0x02 //Fix frequency clock bit
+#define NUM_OF_CHANNELS 8 // NEED COMMENT
+
+static void (*FTMCallback[NUM_OF_CHANNELS])(void*); // User callback function pointer
+static void* FTMArguments[NUM_OF_CHANNELS]; // User arguments pointer to use with user callback function
+
+
 bool FTM_Init()
 {
+	// Enable FTM0 Module
+	SIM_SCGC6 |= SIM_SCGC6_FTM0_MASK;
 
+	// Enable FTM as free running 16-bit counter (p.1257 K70)
+	// Set FTM counter initial value to 0x0000
+	FTM0_CNTIN &= ~FTM_CNTIN_INIT_MASK;
+
+	// Set FTM counter before FTM counter mode to avoid first overflow confusion
+	// Set FTM counter to any value
+	FTM0_CNT = FTM_CNTIN_INIT(0);
+
+	// Set FTM counter mode value to 0xFFFF
+	FTM0_MOD |= FTM_MOD_MOD_MASK;
+
+	// Set FTM clock to fixed frequency clock
+	FTM0_SC |= FTM_SC_CLKS(MCGFFCLK);
+
+	// NVIC Register Masks (p.91 K70)
+	// IRQ = 62
+	// Initialize NVIC
+	// Vector 0x4E=78, IRQ=62
+	// NVIC non-IPR=1, IPR=15
+  // IRQ mod 32 (p.92 K70.pdf)
+	// Clears pending interrupts on FMT0
+	NVICICPR1 = (1<<30);
+
+	// Enables interrupts on FTM0
+	NVICISER1 = (1<<30);
+
+  return true;
 }
 
-/*! @brief Sets up a timer channel.
- *
- *  @param aFTMChannel is a structure containing the parameters to be used in setting up the timer channel.
- *    channelNb is the channel number of the FTM to use.
- *    delayCount is the delay count (in module clock periods) for an output compare event.
- *    timerFunction is used to set the timer up as either an input capture or an output compare.
- *    ioType is a union that depends on the setting of the channel as input capture or output compare:
- *      outputAction is the action to take on a successful output compare.
- *      inputDetection is the type of input capture detection.
- *    userFunction is a pointer to a user callback function.
- *    userArguments is a pointer to the user arguments to use with the user callback function.
- *  @return bool - TRUE if the timer was set up successfully.
- *  @note Assumes the FTM has been initialized.
- */
+
 bool FTM_Set(const TFTMChannel* const aFTMChannel)
 {
+	// Check selected channel
+	if (aFTMChannel->timerFunction == TIMER_FUNCTION_OUTPUT_COMPARE)
+	{
+		// Disable write protection
+		FTM0_MODE |= FTM_MODE_WPDIS_MASK;
+
+		// Select mode (compare output (0:1))
+		//FTM0_CnSC(aFTMChannel->channelNb) &= ~FTM_CnSC_MSB_MASK;
+		//FTM0_CnSC(aFTMChannel->channelNb) |= FTM_CnSC_MSA_MASK;
+		FTM0_CnSC(aFTMChannel->channelNb) |= aFTMChannel->timerFunction << FTM_CnSC_MSA_SHIFT;
+
+
+		//Select edge or level (set output on match(1:1)) NEED CHANGES
+		//FTM0_CnSC(aFTMChannel->channelNb) |= FTM_CnSC_ELSB_MASK; (0x08)
+		//FTM0_CnSC(aFTMChannel->channelNb) |= FTM_CnSC_ELSA_MASK; (0x04)
+		FTM0_CnSC(aFTMChannel->channelNb) |= aFTMChannel->ioType.outputAction << FTM_CnSC_ELSA_SHIFT;
+
+		//Enable write protection
+		FTM0_MODE &= ~FTM_MODE_WPDIS_MASK;
+
+		return true;
+	}
+	//Not output compare - not supported
+	return false;
 
 }
 
 
-/*! @brief Starts a timer if set up for output compare.
- *
- *  @param aFTMChannel is a structure containing the parameters to be used in setting up the timer channel.
- *  @return bool - TRUE if the timer was started successfully.
- *  @note Assumes the FTM has been initialized.
- */
 bool FTM_StartTimer(const TFTMChannel* const aFTMChannel)
 {
+	// Produce output compare interrupt
+	if (aFTMChannel->timerFunction == TIMER_FUNCTION_OUTPUT_COMPARE)
+	{
+			// -> enable channel interrupt flag NEED CHANGES
+			FTM0_CnSC(aFTMChannel->channelNb) = (FTM_CnSC_MSA_MASK | FTM_CnSC_CHIE_MASK);
 
+			// NEED COMMENT
+			FTM0_CnV(aFTMChannel->channelNb) = FTM0_CNT + aFTMChannel->delayCount;
+
+			//Store callback function and arguments in a global private array for interrupt usage
+			FTMCallback[aFTMChannel->channelNb] = aFTMChannel->userFunction;
+			FTMArguments[aFTMChannel->channelNb] = aFTMChannel->userArguments;
+			return true;
+	}
+	return false;
 }
 
 
-/*! @brief Interrupt service routine for the FTM.
- *
- *  If a timer channel was set up as output compare, then the user callback function will be called.
- *  @note Assumes the FTM has been initialized.
- */
 void __attribute__ ((interrupt)) FTM0_ISR(void)
 {
+	// NEED COMMENT
+	uint8_t i;
+	for (i = 0; i < NUM_OF_CHANNELS; i++)
+	{
+			if (FTM0_CnSC(i) | FTM_CnSC_CHF_MASK)
+			{
+					FTM0_CnSC(i) &= ~FTM_CnSC_CHF_MASK;
 
+					if (FTMCallback[i])
+							(*FTMCallback[i])(FTMArguments[i]);
+			}
+	}
 }
 
 /*!

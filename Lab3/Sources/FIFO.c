@@ -65,6 +65,7 @@ bool FIFO_Put(TFIFO * const FIFO, const uint8_t data)
  */
 bool FIFO_Get(TFIFO * const FIFO, uint8_t volatile * const dataPtr)
 {
+
   //Return false if FIFO is empty
   if(FIFO->NbBytes == 0)
     return false;

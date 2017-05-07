@@ -76,6 +76,7 @@ bool UART_Init(const uint32_t baudRate, const uint32_t moduleClk)
   // NVIC non-IPR=1 IPR=12
   // Clear any pending interrupts on LPTMR
   NVICICPR1 = (1 << 17); //IRQ mod 32 (p.92 K70)
+
   // Enable interrupts from LPTMR module
   NVICISER1 = (1 << 17);
 
@@ -97,12 +98,12 @@ bool UART_InChar(uint8_t * const dataPtr)
  */
 bool UART_OutChar(const uint8_t data)
 {
+	bool success = false;
+	UART2_C2 &= ~UART_C2_TIE_MASK;
 	if (FIFO_Put(&TxFIFO, data))
-	{
-		UART2_C2 |= UART_C2_TIE_MASK; //Set interrupt
-		return true;
-	}
-	return false;
+		success = true;
+	UART2_C2 |= UART_C2_TIE_MASK;
+	return success;
 }
 
 

@@ -40,6 +40,8 @@
 #include "LEDs.h"
 #include "Flash.h"
 #include "PIT.h"
+#include "RTC.h"
+#include "FTM.h"
 
 // Defining constants
 #define CMD_SGET_STARTUP 0x04
@@ -48,14 +50,27 @@
 #define CMD_TOWER_MODE 0x0D
 #define CMD_FPROGRAM_BYTE 0x07
 #define CMD_FREAD_BYTE 0x08
-
-static const uint32_t BAUD_RATE  = 115200; //GOTTA CHANGE NAMING MAYBE
+#define CMD_SET_TIME 0x0C
+static const uint32_t BAUD_RATE  = 115200;
 
 // Global variables
 static volatile uint8_t *Write8;
 static uint16union_t volatile *NvTowerNb;
 static uint16union_t volatile *NvTowerMd;
 
+// NEED COMMENTS
+static void FTMCallback(void* arg);
+
+// NEED comments
+static TFTMChannel FTMChannel0 =
+{
+	0,
+	CPU_MCGFF_CLK_HZ_CONFIG_0,
+	TIMER_FUNCTION_OUTPUT_COMPARE,
+	TIMER_OUTPUT_DISCONNECT,
+	&FTMCallback,
+	NULL
+};
 
 
 /*! Reads the command byte and processes relevant functionality
@@ -164,6 +179,10 @@ bool Packet_Processor(void)
 	  else
 	  	success = false;
 			break;
+    case CMD_SET_TIME:
+    	RTC_Set(Packet_Parameter1, Packet_Parameter2, Packet_Parameter3);
+    	success = true;
+    	break;
 
     default:
       success = false;
@@ -188,16 +207,30 @@ bool Packet_Processor(void)
 }
 
 
-// User callback function?
+// User callback function
 void PITCallback(void* arg)
 {
 	// Clear flag by set bit to 1
   PIT_TFLG0 |= PIT_TFLG_TIF_MASK;
 
   // Wait for the PIT interrupt flag to clear ????
-  while (PIT_TFLG0)
-    ;
+  //while (PIT_TFLG0)
+    //;
   LEDs_Toggle(LED_GREEN);
+}
+
+void RTCCallback(void* arg)
+{
+  uint8_t hours, minutes, seconds;							/*!< Variables declared for storing current time*/
+
+  RTC_Get(&hours, &minutes, &seconds);							// Gets current time
+  Packet_Put(CMD_SET_TIME, hours, minutes, seconds);					// Updates time
+  LEDs_Toggle(LED_YELLOW);							// Toggles yellow LED
+}
+
+void FTMCallback(void* arg)
+{
+	LEDs_Off(LED_BLUE);
 }
 
 /*lint -save  -e970 Disable MISRA rule (6.3) checking. */
@@ -212,21 +245,33 @@ int main(void)
 
   /* Write your code here */
 
-  //Disable Interrupt
+  // Disable global interrupt
   __DI();
 
-  //Init Packet
+  // Initialise Packet
   bool packInit = Packet_Init(BAUD_RATE, CPU_BUS_CLK_HZ);
 
-  //Init LEDs
+  // Initialise LEDs
   bool LEDsInit = LEDs_Init();
 
-  //Init Flash
+  // Initialise Flash
   bool flashInit = Flash_Init();
 
-  //Turn LED on if tower init successful
+  // Turn LED on if tower init successful
   if (packInit && LEDsInit && flashInit)
     LEDs_On(LED_ORANGE);
+
+
+  // Initialise PIT
+  PIT_Init(CPU_BUS_CLK_HZ, &PITCallback, NULL);
+  PIT_Set(500e6,false);	// Sets PIT0 to interrupts every half second
+  PIT_Enable(true);			// Starts  PIT0
+
+  // Initialise RTC
+  RTC_Init(&RTCCallback, NULL);
+
+  // Initialise FTM
+  FTM_Init();
 
   // Allocate flash addresses for tower number and mode
   bool allocTowerNB = Flash_AllocateVar((void*)&NvTowerNb, sizeof(*NvTowerNb));
@@ -244,18 +289,22 @@ int main(void)
 		}
 	}
 
-  //Makes the Packet_Processor function execute "0x04 Special - Get startup values" on startup
+  // Makes the Packet_Processor function execute "0x04 Special - Get startup values" on startup
   Packet_Command = CMD_SGET_STARTUP;
   Packet_Processor();
 
+  // Enable global interrupt
   __EI();
   for (;;)
   {
-  	//If a valid packet is received
+  	// If a valid packet is received
     if (Packet_Get())
+    {
+    	LEDs_On(LED_BLUE);
+    	FTM_StartTimer(&FTMChannel0); // NEED COMMENT
       Packet_Processor(); //Handle packet according to the command byte
+    }
   }
-
   /*** Don't write any code pass this line, or it will be deleted during code generation. ***/
   /*** RTOS startup code. Macro PEX_RTOS_START is defined by the RTOS component. DON'T MODIFY THIS CODE!!! ***/
   #ifdef PEX_RTOS_START
