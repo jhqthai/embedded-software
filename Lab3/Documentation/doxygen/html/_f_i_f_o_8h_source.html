@@ -4,7 +4,7 @@
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.10"/>
-<title>Lab3: C:/Users/11990405/Desktop/Lab3_070502/sources/FIFO.h Source File</title>
+<title>Lab3: C:/Users/11981521/Desktop/Lab3_070502/sources/FIFO.h Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -97,12 +97,12 @@ $(document).ready(function(){initNavTree('_f_i_f_o_8h_source.html','');});
 <div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;<span class="preprocessor">#endif</span></div>
 <div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;</div>
 <div class="ttc" id="types_8h_html"><div class="ttname"><a href="types_8h.html">types.h</a></div><div class="ttdoc">Declares new types. </div></div>
-<div class="ttc" id="group___f_i_f_o__module_html_gae1cf4c8b9eb790d59cf492bf8cbb56a5"><div class="ttname"><a href="group___f_i_f_o__module.html#gae1cf4c8b9eb790d59cf492bf8cbb56a5">FIFO_Get</a></div><div class="ttdeci">bool FIFO_Get(TFIFO *const FIFO, uint8_t volatile *const dataPtr)</div><div class="ttdoc">data in the FIFO, retrieve the "first in" and stores it in the memory address of the pointer argument...</div><div class="ttdef"><b>Definition:</b> FIFO.c:66</div></div>
+<div class="ttc" id="group___f_i_f_o__module_html_gae1cf4c8b9eb790d59cf492bf8cbb56a5"><div class="ttname"><a href="group___f_i_f_o__module.html#gae1cf4c8b9eb790d59cf492bf8cbb56a5">FIFO_Get</a></div><div class="ttdeci">bool FIFO_Get(TFIFO *const FIFO, uint8_t volatile *const dataPtr)</div><div class="ttdoc">Get one character from the FIFO. </div><div class="ttdef"><b>Definition:</b> FIFO.c:48</div></div>
 <div class="ttc" id="struct_t_f_i_f_o_html"><div class="ttname"><a href="struct_t_f_i_f_o.html">TFIFO</a></div><div class="ttdef"><b>Definition:</b> FIFO.h:28</div></div>
 <div class="ttc" id="struct_t_f_i_f_o_html_ace00017651a266a66a93aa5220967611"><div class="ttname"><a href="struct_t_f_i_f_o.html#ace00017651a266a66a93aa5220967611">TFIFO::NbBytes</a></div><div class="ttdeci">uint16_t volatile NbBytes</div><div class="ttdef"><b>Definition:</b> FIFO.h:32</div></div>
-<div class="ttc" id="group___f_i_f_o__module_html_gad9207f49ab9ed061b6dca6063112ca60"><div class="ttname"><a href="group___f_i_f_o__module.html#gad9207f49ab9ed061b6dca6063112ca60">FIFO_Init</a></div><div class="ttdeci">void FIFO_Init(TFIFO *const FIFO)</div><div class="ttdoc">Initialises the FIFO to starting values. </div><div class="ttdef"><b>Definition:</b> FIFO.c:28</div></div>
+<div class="ttc" id="group___f_i_f_o__module_html_gad9207f49ab9ed061b6dca6063112ca60"><div class="ttname"><a href="group___f_i_f_o__module.html#gad9207f49ab9ed061b6dca6063112ca60">FIFO_Init</a></div><div class="ttdeci">void FIFO_Init(TFIFO *const FIFO)</div><div class="ttdoc">Initialize the FIFO before first use. </div><div class="ttdef"><b>Definition:</b> FIFO.c:22</div></div>
 <div class="ttc" id="struct_t_f_i_f_o_html_a5063b875898a6f23a97aa3ca17f0544b"><div class="ttname"><a href="struct_t_f_i_f_o.html#a5063b875898a6f23a97aa3ca17f0544b">TFIFO::End</a></div><div class="ttdeci">uint16_t End</div><div class="ttdef"><b>Definition:</b> FIFO.h:31</div></div>
-<div class="ttc" id="group___f_i_f_o__module_html_gace64ba4e6bd943f990a294693156cc3b"><div class="ttname"><a href="group___f_i_f_o__module.html#gace64ba4e6bd943f990a294693156cc3b">FIFO_Put</a></div><div class="ttdeci">bool FIFO_Put(TFIFO *const FIFO, const uint8_t data)</div><div class="ttdoc">gets an 8 bit int and puts it in the correct position of the FIFO buffer if space available...</div><div class="ttdef"><b>Definition:</b> FIFO.c:42</div></div>
+<div class="ttc" id="group___f_i_f_o__module_html_gace64ba4e6bd943f990a294693156cc3b"><div class="ttname"><a href="group___f_i_f_o__module.html#gace64ba4e6bd943f990a294693156cc3b">FIFO_Put</a></div><div class="ttdeci">bool FIFO_Put(TFIFO *const FIFO, const uint8_t data)</div><div class="ttdoc">Put one character into the FIFO. </div><div class="ttdef"><b>Definition:</b> FIFO.c:29</div></div>
 <div class="ttc" id="struct_t_f_i_f_o_html_a092a7559431a12616672354641908167"><div class="ttname"><a href="struct_t_f_i_f_o.html#a092a7559431a12616672354641908167">TFIFO::Start</a></div><div class="ttdeci">uint16_t Start</div><div class="ttdef"><b>Definition:</b> FIFO.h:30</div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
@@ -110,7 +110,7 @@ $(document).ready(function(){initNavTree('_f_i_f_o_8h_source.html','');});
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
     <li class="navelem"><a class="el" href="dir_08d237fc27d4ecd563f71c5d52f2fecc.html">sources</a></li><li class="navelem"><a class="el" href="_f_i_f_o_8h.html">FIFO.h</a></li>
-    <li class="footer">Generated on Tue May 2 2017 14:41:37 for Lab3 by
+    <li class="footer">Generated on Wed May 3 2017 11:07:00 for Lab3 by
     <a href="http://www.doxygen.org/index.html">
     <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.10 </li>
   </ul>

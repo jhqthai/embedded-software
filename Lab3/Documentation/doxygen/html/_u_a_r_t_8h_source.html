@@ -4,7 +4,7 @@
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.10"/>
-<title>Lab3: C:/Users/11990405/Desktop/Lab3_070502/sources/UART.h Source File</title>
+<title>Lab3: C:/Users/11981521/Desktop/Lab3_070502/sources/UART.h Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -86,23 +86,23 @@ $(document).ready(function(){initNavTree('_u_a_r_t_8h_source.html','');});
 <div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;</div>
 <div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;<span class="keywordtype">void</span> <a class="code" href="group___u_a_r_t__module.html#ga799b375101827a18f652a3f28ecefcd0">UART_Poll</a>(<span class="keywordtype">void</span>);</div>
 <div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;</div>
-<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;<span class="keywordtype">void</span> <a class="code" href="group___f_t_m__module.html#ga445500277ba0e363873b34cffc015745">__attribute__</a> ((interrupt)) UART_ISR(<span class="keywordtype">void</span>);</div>
+<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;<span class="keywordtype">void</span> <a class="code" href="group___f_t_m__module.html#ga1a1ed9b995de07b2b35c3ccfd22aed49">__attribute__</a> ((interrupt)) UART_ISR(<span class="keywordtype">void</span>);</div>
 <div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;</div>
 <div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;<span class="preprocessor">#endif</span></div>
 <div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;</div>
 <div class="ttc" id="types_8h_html"><div class="ttname"><a href="types_8h.html">types.h</a></div><div class="ttdoc">Declares new types. </div></div>
-<div class="ttc" id="group___u_a_r_t__module_html_gae5760d1a086ec79a33901db253000af9"><div class="ttname"><a href="group___u_a_r_t__module.html#gae5760d1a086ec79a33901db253000af9">UART_Init</a></div><div class="ttdeci">bool UART_Init(const uint32_t baudRate, const uint32_t moduleClk)</div><div class="ttdoc">Initialises the registers needed to enable UART, pin and peripheral function and to setup correct bau...</div><div class="ttdef"><b>Definition:</b> UART.c:28</div></div>
-<div class="ttc" id="group___u_a_r_t__module_html_gab20ebaeefd1f29d31e098ade31189dda"><div class="ttname"><a href="group___u_a_r_t__module.html#gab20ebaeefd1f29d31e098ade31189dda">UART_OutChar</a></div><div class="ttdeci">bool UART_OutChar(const uint8_t data)</div><div class="ttdoc">Used by tower to transmit a character to TxFIFO. </div><div class="ttdef"><b>Definition:</b> UART.c:99</div></div>
-<div class="ttc" id="group___f_t_m__module_html_ga445500277ba0e363873b34cffc015745"><div class="ttname"><a href="group___f_t_m__module.html#ga445500277ba0e363873b34cffc015745">__attribute__</a></div><div class="ttdeci">void __attribute__((interrupt))</div><div class="ttdoc">Interrupt service routine for the FTM. </div><div class="ttdef"><b>Definition:</b> FTM.c:112</div></div>
+<div class="ttc" id="group___f_t_m__module_html_ga1a1ed9b995de07b2b35c3ccfd22aed49"><div class="ttname"><a href="group___f_t_m__module.html#ga1a1ed9b995de07b2b35c3ccfd22aed49">__attribute__</a></div><div class="ttdeci">void __attribute__((interrupt))</div><div class="ttdoc">Interrupt service routine for the FTM. </div><div class="ttdef"><b>Definition:</b> FTM.c:108</div></div>
+<div class="ttc" id="group___u_a_r_t__module_html_gae5760d1a086ec79a33901db253000af9"><div class="ttname"><a href="group___u_a_r_t__module.html#gae5760d1a086ec79a33901db253000af9">UART_Init</a></div><div class="ttdeci">bool UART_Init(const uint32_t baudRate, const uint32_t moduleClk)</div><div class="ttdoc">Sets up the UART interface before first use. </div><div class="ttdef"><b>Definition:</b> UART.c:27</div></div>
+<div class="ttc" id="group___u_a_r_t__module_html_gab20ebaeefd1f29d31e098ade31189dda"><div class="ttname"><a href="group___u_a_r_t__module.html#gab20ebaeefd1f29d31e098ade31189dda">UART_OutChar</a></div><div class="ttdeci">bool UART_OutChar(const uint8_t data)</div><div class="ttdoc">Put a byte in the transmit FIFO if it is not full. </div><div class="ttdef"><b>Definition:</b> UART.c:96</div></div>
 <div class="ttc" id="group___u_a_r_t__module_html_ga799b375101827a18f652a3f28ecefcd0"><div class="ttname"><a href="group___u_a_r_t__module.html#ga799b375101827a18f652a3f28ecefcd0">UART_Poll</a></div><div class="ttdeci">void UART_Poll(void)</div><div class="ttdoc">Poll the UART status register to try and receive and/or transmit one character. </div></div>
-<div class="ttc" id="group___u_a_r_t__module_html_ga03049bcc3bf9af2a75ee77016d3b0d60"><div class="ttname"><a href="group___u_a_r_t__module.html#ga03049bcc3bf9af2a75ee77016d3b0d60">UART_InChar</a></div><div class="ttdeci">bool UART_InChar(uint8_t *const dataPtr)</div><div class="ttdoc">Used by tower to receive a character from RxFIFO. </div><div class="ttdef"><b>Definition:</b> UART.c:92</div></div>
+<div class="ttc" id="group___u_a_r_t__module_html_ga03049bcc3bf9af2a75ee77016d3b0d60"><div class="ttname"><a href="group___u_a_r_t__module.html#ga03049bcc3bf9af2a75ee77016d3b0d60">UART_InChar</a></div><div class="ttdeci">bool UART_InChar(uint8_t *const dataPtr)</div><div class="ttdoc">Get a character from the receive FIFO if it is not empty. </div><div class="ttdef"><b>Definition:</b> UART.c:90</div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
     <li class="navelem"><a class="el" href="dir_08d237fc27d4ecd563f71c5d52f2fecc.html">sources</a></li><li class="navelem"><a class="el" href="_u_a_r_t_8h.html">UART.h</a></li>
-    <li class="footer">Generated on Tue May 2 2017 14:41:37 for Lab3 by
+    <li class="footer">Generated on Wed May 3 2017 11:07:00 for Lab3 by
     <a href="http://www.doxygen.org/index.html">
     <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.10 </li>
   </ul>

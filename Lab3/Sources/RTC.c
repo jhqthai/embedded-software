@@ -26,7 +26,7 @@ bool RTC_Init(void (*userFunction)(void*), void* userArguments)
 	RTCCallback = userFunction;
 	RTCArguments = userArguments;
 
-	// Not sure if need to enable  RTC SCGC
+	// Enable  RTC SCGC
 	SIM_SCGC6 |= SIM_SCGC6_RTC_MASK;
 
 	// Enable RTC oscillator
@@ -34,6 +34,9 @@ bool RTC_Init(void (*userFunction)(void*), void* userArguments)
 
 	// Set RTC oscillator load
 	RTC_CR |= RTC_CR_SC16P_MASK | RTC_CR_SC2P_MASK;
+
+	// Write initial value to TSR for hard reset
+	RTC_TSR &= ~RTC_TSR_TSR_MASK;
 
 	// Lock control register
 	RTC_LR &= ~RTC_LR_CRL_MASK;
@@ -44,8 +47,11 @@ bool RTC_Init(void (*userFunction)(void*), void* userArguments)
 	// Enable time seconds interrupt
 	RTC_IER |= RTC_IER_TSIE_MASK;
 
-	// Disable interrupt not needed???
+	// Disable unused interrupt
 	RTC_IER &= ~(RTC_IER_TAIE_MASK | RTC_IER_TOIE_MASK | RTC_IER_TIIE_MASK);
+
+
+
 
   // Initialize NVIC
   // Vector 0x53=83, IRQ=67
@@ -87,8 +93,15 @@ void RTC_Set(const uint8_t hours, const uint8_t minutes, const uint8_t seconds)
 
 void RTC_Get(uint8_t* const hours, uint8_t* const minutes, uint8_t* const seconds)
 {
-	// NEED COMMENT
+	// Gets current time in seconds and splits into hours/mins/seconds
 	uint32_t secondsTotal = RTC_TSR;
+	uint32_t secondsTotal2 = RTC_TSR;
+	while(secondsTotal != secondsTotal2) //reads twice and verifies there was no change during first read
+	{
+		secondsTotal = RTC_TSR;
+		secondsTotal2 = RTC_TSR;
+	}
+
 	*seconds = (uint8_t)(secondsTotal%60);
 	*minutes = (uint8_t)((secondsTotal)/60 % 60);
 	*hours = (uint8_t)((secondsTotal)/3600 % 24);
@@ -97,7 +110,7 @@ void RTC_Get(uint8_t* const hours, uint8_t* const minutes, uint8_t* const second
 
 void __attribute__ ((interrupt)) RTC_ISR(void)
 {
-	// NEED COMMENT
+	// Runs callback method if interrupt requested
 	if (RTCCallback)
 		(*RTCCallback)(RTCArguments);
 }

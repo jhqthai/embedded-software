@@ -1,34 +1,34 @@
 Sources/Events.o: ../Sources/Events.c \
- C:/Users/11990405/Desktop/Lab3_070428/Generated_Code/Cpu.h \
- C:/Users/11990405/Desktop/Lab3_070428/Generated_Code/PE_Types.h \
- C:/Users/11990405/Desktop/Lab3_070428/Generated_Code/PE_Error.h \
- C:/Users/11990405/Desktop/Lab3_070428/Generated_Code/PE_Const.h \
- C:/Users/11990405/Desktop/Lab3_070428/Generated_Code/IO_Map.h \
- C:/Users/11990405/Desktop/Lab3_070428/Static_Code/IO_Map/MK70F12.h \
+ C:/Users/11981521/Desktop/Lab3_070502/Generated_Code/Cpu.h \
+ C:/Users/11981521/Desktop/Lab3_070502/Generated_Code/PE_Types.h \
+ C:/Users/11981521/Desktop/Lab3_070502/Generated_Code/PE_Error.h \
+ C:/Users/11981521/Desktop/Lab3_070502/Generated_Code/PE_Const.h \
+ C:/Users/11981521/Desktop/Lab3_070502/Generated_Code/IO_Map.h \
+ C:/Users/11981521/Desktop/Lab3_070502/Static_Code/IO_Map/MK70F12.h \
  ../Sources/Events.h \
- C:/Users/11990405/Desktop/Lab3_070428/Generated_Code/PE_Types.h \
- C:/Users/11990405/Desktop/Lab3_070428/Generated_Code/PE_Error.h \
- C:/Users/11990405/Desktop/Lab3_070428/Generated_Code/PE_Const.h \
- C:/Users/11990405/Desktop/Lab3_070428/Generated_Code/IO_Map.h
+ C:/Users/11981521/Desktop/Lab3_070502/Generated_Code/PE_Types.h \
+ C:/Users/11981521/Desktop/Lab3_070502/Generated_Code/PE_Error.h \
+ C:/Users/11981521/Desktop/Lab3_070502/Generated_Code/PE_Const.h \
+ C:/Users/11981521/Desktop/Lab3_070502/Generated_Code/IO_Map.h
 
-C:/Users/11990405/Desktop/Lab3_070428/Generated_Code/Cpu.h:
+C:/Users/11981521/Desktop/Lab3_070502/Generated_Code/Cpu.h:
 
-C:/Users/11990405/Desktop/Lab3_070428/Generated_Code/PE_Types.h:
+C:/Users/11981521/Desktop/Lab3_070502/Generated_Code/PE_Types.h:
 
-C:/Users/11990405/Desktop/Lab3_070428/Generated_Code/PE_Error.h:
+C:/Users/11981521/Desktop/Lab3_070502/Generated_Code/PE_Error.h:
 
-C:/Users/11990405/Desktop/Lab3_070428/Generated_Code/PE_Const.h:
+C:/Users/11981521/Desktop/Lab3_070502/Generated_Code/PE_Const.h:
 
-C:/Users/11990405/Desktop/Lab3_070428/Generated_Code/IO_Map.h:
+C:/Users/11981521/Desktop/Lab3_070502/Generated_Code/IO_Map.h:
 
-C:/Users/11990405/Desktop/Lab3_070428/Static_Code/IO_Map/MK70F12.h:
+C:/Users/11981521/Desktop/Lab3_070502/Static_Code/IO_Map/MK70F12.h:
 
 ../Sources/Events.h:
 
-C:/Users/11990405/Desktop/Lab3_070428/Generated_Code/PE_Types.h:
+C:/Users/11981521/Desktop/Lab3_070502/Generated_Code/PE_Types.h:
 
-C:/Users/11990405/Desktop/Lab3_070428/Generated_Code/PE_Error.h:
+C:/Users/11981521/Desktop/Lab3_070502/Generated_Code/PE_Error.h:
 
-C:/Users/11990405/Desktop/Lab3_070428/Generated_Code/PE_Const.h:
+C:/Users/11981521/Desktop/Lab3_070502/Generated_Code/PE_Const.h:
 
-C:/Users/11990405/Desktop/Lab3_070428/Generated_Code/IO_Map.h:
+C:/Users/11981521/Desktop/Lab3_070502/Generated_Code/IO_Map.h:

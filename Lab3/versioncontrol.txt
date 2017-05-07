@@ -44,3 +44,8 @@ Doxygen completed
 Need comments
 Need fix on led blue
 
+03/05/07
+Fixed critical in FIFO
+Added RTC_Get read time twice in case changes happen during first read
+Added check for FTM_CnSC_CHIE_MASK to see if mask is enable or not for multiple channel usage
+

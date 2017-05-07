@@ -23,8 +23,7 @@
 static TFIFO RxFIFO;
 static TFIFO TxFIFO;
 
-/*! @brief Initialises the registers needed to enable UART, pin and peripheral function and to setup correct baud rate.
- */
+
 bool UART_Init(const uint32_t baudRate, const uint32_t moduleClk)
 {
   //Enable UART2 Module
@@ -62,8 +61,6 @@ bool UART_Init(const uint32_t baudRate, const uint32_t moduleClk)
 
   //Enable UART2 C2 Receiver
   UART2_C2 |= UART_C2_RIE_MASK;
-  //Enable UART 2 C2 Transmitter
-  UART2_C2 |= UART_C2_TIE_MASK;
 
   //Enable UART2 C2 Receiver
   UART2_C2 |= UART_C2_RE_MASK;
@@ -87,35 +84,36 @@ bool UART_Init(const uint32_t baudRate, const uint32_t moduleClk)
   
 }
 
-/*! @brief Used by tower to receive a character from RxFIFO.
- */
+
 bool UART_InChar(uint8_t * const dataPtr)
 {
-  return FIFO_Get(&RxFIFO, dataPtr);
+  return FIFO_Get(&RxFIFO, dataPtr); // Store incoming byte in variable
 }
 
-/*! @brief Used by tower to transmit a character to TxFIFO.
- */
+
 bool UART_OutChar(const uint8_t data)
 {
 	bool success = false;
-	UART2_C2 &= ~UART_C2_TIE_MASK;
-	if (FIFO_Put(&TxFIFO, data))
-		success = true;
+
+	// Enter critical section
+	EnterCritical();
+
+	// Check if data successfully written into FIFO
+	success = FIFO_Put(&TxFIFO, data);
+
+	// Exit critical section
+	ExitCritical();
+
+	// Enable interrupt flag
 	UART2_C2 |= UART_C2_TIE_MASK;
 	return success;
 }
 
 
-/*! @brief Checks to see if there is a char to read from or write to the relevant FIFO.
- *
- *  @return void
- */
-
 void __attribute__ ((interrupt)) UART_ISR (void)
 {
-
-	if(UART2_C2 & UART_C2_RIE_MASK) //Read for this is cause from PC
+	//Read for this is cause from PC
+	if (UART2_C2 & UART_C2_RIE_MASK)
 	{
 		// Clear RDRF flag by reading the status register
 		if (UART2_S1 & UART_S1_RDRF_MASK)
@@ -123,25 +121,13 @@ void __attribute__ ((interrupt)) UART_ISR (void)
 	}
 
 	// Clear TDRE flag by reading the status register
-	if(UART2_S1 & UART_S1_TDRE_MASK)
+	if (UART2_S1 & UART_S1_TDRE_MASK)
 	{
 		if (!(FIFO_Get(&TxFIFO, &UART2_D)))
-			UART2_C2 &= ~UART_C2_TIE_MASK; //Clears Interrupt
+			//Clears interrupt
+			UART2_C2 &= ~UART_C2_TIE_MASK;
 	}
 }
-
-/*
-void UART_Poll(void)
-{
-  //Checks UART2_S1 "TDRE" bit -> 1 indicates we should read TxFIFO and write to UART_D
-  if (UART2_S1 & UART_S1_TDRE_MASK)
-    FIFO_Get(&TxFIFO, &UART2_D);
-
-  //Checks UART2_S1 "RDRF" bit -> 1 indicates we should read UART_D and write to RxFIFO
-  if (UART2_S1 & UART_S1_RDRF_MASK)
-    FIFO_Put(&RxFIFO, UART2_D);
-}
-*/
 
 /*!
 ** @}

@@ -16,10 +16,7 @@
 #include "LEDs.h"
 #include "MK70F12.h"
 
-/*! @brief Enables LED Pins and configures the GPIO.
- *
- *  @return bool - TRUE if the LEDs were successfully initialized.
- */
+
 bool LEDs_Init(void)
 {
 	//Enable PORT A pin routing
@@ -45,30 +42,20 @@ bool LEDs_Init(void)
   return true;
 }
 
-/*! @brief Clears PDOR for the color in arguments (LED ON)
- *
- *  @param color The color of the LED to turn on.
- */
 void LEDs_On(const TLED color)
 {
-  GPIOA_PCOR |= color;
+  GPIOA_PCOR = color; // The color of the LED to turn on.
 }
 
-/*! @brief Sets PDOR to 1 at the appropriate pin (LED OFF)
- *
- *  @param color The color of the LED to turn off.
- */
-void LEDs_Off(const TLED color){
-	GPIOA_PSOR |= color;
+void LEDs_Off(const TLED color)
+{
+	GPIOA_PSOR = color; // The color of the LED to turn off.
 }
 
 
-/*! @brief Toggles PDOR to the inverse of it's current state
- *
- *  @param color The color of the LED to turn toggle.
- */
-void LEDs_Toggle(const TLED color){
-	GPIOA_PTOR |= color;
+void LEDs_Toggle(const TLED color)
+{
+	GPIOA_PTOR = color; // The color of the LED to turn toggle.
 }
 
 /*!

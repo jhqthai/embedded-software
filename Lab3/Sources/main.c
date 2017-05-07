@@ -51,6 +51,7 @@
 #define CMD_FPROGRAM_BYTE 0x07
 #define CMD_FREAD_BYTE 0x08
 #define CMD_SET_TIME 0x0C
+
 static const uint32_t BAUD_RATE  = 115200;
 
 // Global variables
@@ -58,18 +59,18 @@ static volatile uint8_t *Write8;
 static uint16union_t volatile *NvTowerNb;
 static uint16union_t volatile *NvTowerMd;
 
-// NEED COMMENTS
+// Declare function to be use in struct
 static void FTMCallback(void* arg);
 
-// NEED comments
+// Initialise FTM channel0
 static TFTMChannel FTMChannel0 =
 {
 	0,
-	CPU_MCGFF_CLK_HZ_CONFIG_0,
-	TIMER_FUNCTION_OUTPUT_COMPARE,
-	TIMER_OUTPUT_DISCONNECT,
-	&FTMCallback,
-	NULL
+	CPU_MCGFF_CLK_HZ_CONFIG_0, // Clock source
+	TIMER_FUNCTION_OUTPUT_COMPARE, // FTM Mode
+	TIMER_OUTPUT_DISCONNECT, // FTM edge/level select
+	&FTMCallback, // FTM user function
+	NULL // FTM user argument
 };
 
 
@@ -78,7 +79,7 @@ static TFTMChannel FTMChannel0 =
  *
  *  @return bool - TRUE a valid case received & packet ACK
  */
-bool Packet_Processor(void)
+bool PacketProcessor(void)
 {
   bool success;
 
@@ -90,7 +91,7 @@ bool Packet_Processor(void)
       if ((Packet_Parameter1 | Packet_Parameter2 | Packet_Parameter3) == 0)
       {
         Packet_Put(CMD_SGET_STARTUP, 0x0, 0x0, 0x0);
-        Packet_Put(CMD_SGET_VERSION, 0x76, 0x02, 0x00);
+        Packet_Put(CMD_SGET_VERSION, 0x76, 0x03, 0x00);
         Packet_Put(CMD_TOWER_NUMBER, 0x01, NvTowerNb->s.Lo, NvTowerNb->s.Hi);
         Packet_Put(CMD_TOWER_MODE, 0x01, NvTowerMd->s.Lo, NvTowerMd->s.Hi);
         success = true;
@@ -103,7 +104,7 @@ bool Packet_Processor(void)
     case CMD_SGET_VERSION:
       if ((Packet_Parameter1 == 0x76) & (Packet_Parameter2 == 0x78) & (Packet_Parameter3 == 0x0D))
       {
-        Packet_Put(CMD_SGET_VERSION, 0x76, 0x02, 0x00);
+        Packet_Put(CMD_SGET_VERSION, 0x76, 0x03, 0x00);
         success = true;
       }
       else
@@ -170,18 +171,27 @@ bool Packet_Processor(void)
 		// Case Flash Read Byte
     case CMD_FREAD_BYTE:
 
-	  // Check offset validity
-	  if ((0x00 <= Packet_Parameter1 < 0x07) & (Packet_Parameter2 == 0x00) & (Packet_Parameter3 == 0x00))
-	  {
-	  	uint8_t rByte = _FB(FLASH_DATA_START + Packet_Parameter1); // Read data from appropriate location
-	  	success = Packet_Put(CMD_FREAD_BYTE, Packet_Parameter1, 0x00, rByte);
-	  }
-	  else
-	  	success = false;
-			break;
+			// Check offset validity
+			if ((0x00 <= Packet_Parameter1 < 0x07) & (Packet_Parameter2 == 0x00) & (Packet_Parameter3 == 0x00))
+			{
+				uint8_t rByte = _FB(FLASH_DATA_START + Packet_Parameter1); // Read data from appropriate location
+				success = Packet_Put(CMD_FREAD_BYTE, Packet_Parameter1, 0x00, rByte);
+			}
+			else
+				success = false;
+				break;
+	
+		// Case Set Time
     case CMD_SET_TIME:
-    	RTC_Set(Packet_Parameter1, Packet_Parameter2, Packet_Parameter3);
-    	success = true;
+    	// Check to see if valid time is received
+    	if ((Packet_Parameter1<24) && (Packet_Parameter2<60) && (Packet_Parameter3<60))
+    	{
+				// Pass parameters to RTC_Set function to set time
+				RTC_Set(Packet_Parameter1, Packet_Parameter2, Packet_Parameter3);
+				success = true;
+    	}
+    	else
+    		success = false;
     	break;
 
     default:
@@ -206,30 +216,47 @@ bool Packet_Processor(void)
   }
 }
 
-
-// User callback function
+/*! @brief PIT interrupt user callback function
+ *  
+ *	Confirm interrupt occurred
+ *	Toggle green LED
+ *  @return void
+ */
 void PITCallback(void* arg)
 {
-	// Clear flag by set bit to 1
-  PIT_TFLG0 |= PIT_TFLG_TIF_MASK;
-
-  // Wait for the PIT interrupt flag to clear ????
-  //while (PIT_TFLG0)
-    //;
-  LEDs_Toggle(LED_GREEN);
+	// Toggles green LED 
+	LEDs_Toggle(LED_GREEN);
 }
 
+/*! @brief RTC interrupt user callback function
+ *
+ *  Send current time to PC
+ *	Toggle yellow LED
+ *  @return void
+ */
 void RTCCallback(void* arg)
 {
-  uint8_t hours, minutes, seconds;							/*!< Variables declared for storing current time*/
-
-  RTC_Get(&hours, &minutes, &seconds);							// Gets current time
-  Packet_Put(CMD_SET_TIME, hours, minutes, seconds);					// Updates time
-  LEDs_Toggle(LED_YELLOW);							// Toggles yellow LED
+	// Variables to store current time
+	uint8_t hours, minutes, seconds;
+	
+	// Gets current time
+	RTC_Get(&hours, &minutes, &seconds);
+  
+	// Sets updated time
+	Packet_Put(CMD_SET_TIME, hours, minutes, seconds);
+	
+	// Toggles yellow LED
+	LEDs_Toggle(LED_YELLOW);							
 }
 
+/*! @brief FTM interrupt user callback function
+ *
+ *	Toggle blue LED
+ *  @return void
+ */
 void FTMCallback(void* arg)
 {
+	// Turn LED off after FTM interrupt
 	LEDs_Off(LED_BLUE);
 }
 
@@ -257,10 +284,9 @@ int main(void)
   // Initialise Flash
   bool flashInit = Flash_Init();
 
-  // Turn LED on if tower init successful
+  // Turn LED on if tower initialise successful
   if (packInit && LEDsInit && flashInit)
     LEDs_On(LED_ORANGE);
-
 
   // Initialise PIT
   PIT_Init(CPU_BUS_CLK_HZ, &PITCallback, NULL);
@@ -291,7 +317,7 @@ int main(void)
 
   // Makes the Packet_Processor function execute "0x04 Special - Get startup values" on startup
   Packet_Command = CMD_SGET_STARTUP;
-  Packet_Processor();
+  PacketProcessor();
 
   // Enable global interrupt
   __EI();
@@ -301,8 +327,8 @@ int main(void)
     if (Packet_Get())
     {
     	LEDs_On(LED_BLUE);
-    	FTM_StartTimer(&FTMChannel0); // NEED COMMENT
-      Packet_Processor(); //Handle packet according to the command byte
+    	FTM_StartTimer(&FTMChannel0); // Start timer for output compare
+      PacketProcessor(); //Handle packet according to the command byte
     }
   }
   /*** Don't write any code pass this line, or it will be deleted during code generation. ***/

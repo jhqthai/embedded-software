@@ -18,7 +18,7 @@
 
 
 #define MCGFFCLK 0x02 //Fix frequency clock bit
-#define NUM_OF_CHANNELS 8 // NEED COMMENT
+#define NUM_OF_CHANNELS 8 // Number of supported channels
 
 static void (*FTMCallback[NUM_OF_CHANNELS])(void*); // User callback function pointer
 static void* FTMArguments[NUM_OF_CHANNELS]; // User arguments pointer to use with user callback function
@@ -43,8 +43,6 @@ bool FTM_Init()
 	// Set FTM clock to fixed frequency clock
 	FTM0_SC |= FTM_SC_CLKS(MCGFFCLK);
 
-	// NVIC Register Masks (p.91 K70)
-	// IRQ = 62
 	// Initialize NVIC
 	// Vector 0x4E=78, IRQ=62
 	// NVIC non-IPR=1, IPR=15
@@ -67,15 +65,11 @@ bool FTM_Set(const TFTMChannel* const aFTMChannel)
 		// Disable write protection
 		FTM0_MODE |= FTM_MODE_WPDIS_MASK;
 
-		// Select mode (compare output (0:1))
-		//FTM0_CnSC(aFTMChannel->channelNb) &= ~FTM_CnSC_MSB_MASK;
-		//FTM0_CnSC(aFTMChannel->channelNb) |= FTM_CnSC_MSA_MASK;
+		// Select mode (p.1212 K70)
 		FTM0_CnSC(aFTMChannel->channelNb) |= aFTMChannel->timerFunction << FTM_CnSC_MSA_SHIFT;
 
 
-		//Select edge or level (set output on match(1:1)) NEED CHANGES
-		//FTM0_CnSC(aFTMChannel->channelNb) |= FTM_CnSC_ELSB_MASK; (0x08)
-		//FTM0_CnSC(aFTMChannel->channelNb) |= FTM_CnSC_ELSA_MASK; (0x04)
+		//Select edge or level (p.1212 K70)
 		FTM0_CnSC(aFTMChannel->channelNb) |= aFTMChannel->ioType.outputAction << FTM_CnSC_ELSA_SHIFT;
 
 		//Enable write protection
@@ -94,13 +88,13 @@ bool FTM_StartTimer(const TFTMChannel* const aFTMChannel)
 	// Produce output compare interrupt
 	if (aFTMChannel->timerFunction == TIMER_FUNCTION_OUTPUT_COMPARE)
 	{
-			// -> enable channel interrupt flag NEED CHANGES
+			// Enable channel output compare with interrupt enabled
 			FTM0_CnSC(aFTMChannel->channelNb) = (FTM_CnSC_MSA_MASK | FTM_CnSC_CHIE_MASK);
 
-			// NEED COMMENT
+			// Add delay to counter and store as interrupt time
 			FTM0_CnV(aFTMChannel->channelNb) = FTM0_CNT + aFTMChannel->delayCount;
 
-			//Store callback function and arguments in a global private array for interrupt usage
+			// Store callback function and arguments in a global private array for interrupt usage
 			FTMCallback[aFTMChannel->channelNb] = aFTMChannel->userFunction;
 			FTMArguments[aFTMChannel->channelNb] = aFTMChannel->userArguments;
 			return true;
@@ -111,17 +105,19 @@ bool FTM_StartTimer(const TFTMChannel* const aFTMChannel)
 
 void __attribute__ ((interrupt)) FTM0_ISR(void)
 {
-	// NEED COMMENT
-	uint8_t i;
+	uint8_t i; // Channel counter variable
+	// Runs through all channels and checks to see which one requests a callback
 	for (i = 0; i < NUM_OF_CHANNELS; i++)
 	{
-			if (FTM0_CnSC(i) | FTM_CnSC_CHF_MASK)
-			{
-					FTM0_CnSC(i) &= ~FTM_CnSC_CHF_MASK;
+		if (FTM0_CnSC(i) | FTM_CnSC_CHF_MASK | FTM_CnSC_CHIE_MASK)
+		{
+			// Reset interrupts
+			FTM0_CnSC(i) &= ~(FTM_CnSC_CHF_MASK | FTM_CnSC_CHIE_MASK);
 
-					if (FTMCallback[i])
-							(*FTMCallback[i])(FTMArguments[i]);
-			}
+			// Runs callback method if interrupt requested
+			if (FTMCallback[i])
+				(*FTMCallback[i])(FTMArguments[i]);
+		}
 	}
 }
 

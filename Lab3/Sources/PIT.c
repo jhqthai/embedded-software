@@ -68,7 +68,7 @@ void PIT_Set(const uint32_t period, const bool restart)
 	// LDVAL trigger = clock cycles - 1 (p.1339 K70)
 	uint32_t triggerLDVAL = period/periodClk -1;
 
-	// NEED COMMENT
+	// If restart true, disable pit and set up timer as per spec
 	if (restart)
 	{
 		PIT_Enable(false);
@@ -91,7 +91,10 @@ void PIT_Enable(const bool enable)
 
 void __attribute__ ((interrupt)) PIT_ISR(void)
 {
-	// NEED COMMENT
+	// Clear flag by set bit to 1
+	PIT_TFLG0 |= PIT_TFLG_TIF_MASK;
+
+	// Runs callback method if interrupt requested
 	if (PITCallback)
 		(*PITCallback)(PITArguments);
 }

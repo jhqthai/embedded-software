@@ -82,13 +82,13 @@ Macros</h2></td></tr>
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
 <tr class="memitem:gad9207f49ab9ed061b6dca6063112ca60"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___f_i_f_o__module.html#gad9207f49ab9ed061b6dca6063112ca60">FIFO_Init</a> (<a class="el" href="struct_t_f_i_f_o.html">TFIFO</a> *const FIFO)</td></tr>
-<tr class="memdesc:gad9207f49ab9ed061b6dca6063112ca60"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialises the FIFO to starting values.  <a href="#gad9207f49ab9ed061b6dca6063112ca60">More...</a><br /></td></tr>
+<tr class="memdesc:gad9207f49ab9ed061b6dca6063112ca60"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialize the FIFO before first use.  <a href="#gad9207f49ab9ed061b6dca6063112ca60">More...</a><br /></td></tr>
 <tr class="separator:gad9207f49ab9ed061b6dca6063112ca60"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gace64ba4e6bd943f990a294693156cc3b"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___f_i_f_o__module.html#gace64ba4e6bd943f990a294693156cc3b">FIFO_Put</a> (<a class="el" href="struct_t_f_i_f_o.html">TFIFO</a> *const FIFO, const uint8_t data)</td></tr>
-<tr class="memdesc:gace64ba4e6bd943f990a294693156cc3b"><td class="mdescLeft">&#160;</td><td class="mdescRight">gets an 8 bit int and puts it in the correct position of the FIFO buffer if space available.  <a href="#gace64ba4e6bd943f990a294693156cc3b">More...</a><br /></td></tr>
+<tr class="memdesc:gace64ba4e6bd943f990a294693156cc3b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Put one character into the FIFO.  <a href="#gace64ba4e6bd943f990a294693156cc3b">More...</a><br /></td></tr>
 <tr class="separator:gace64ba4e6bd943f990a294693156cc3b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gae1cf4c8b9eb790d59cf492bf8cbb56a5"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___f_i_f_o__module.html#gae1cf4c8b9eb790d59cf492bf8cbb56a5">FIFO_Get</a> (<a class="el" href="struct_t_f_i_f_o.html">TFIFO</a> *const FIFO, uint8_t volatile *const dataPtr)</td></tr>
-<tr class="memdesc:gae1cf4c8b9eb790d59cf492bf8cbb56a5"><td class="mdescLeft">&#160;</td><td class="mdescRight">data in the FIFO, retrieve the "first in" and stores it in the memory address of the pointer argument.  <a href="#gae1cf4c8b9eb790d59cf492bf8cbb56a5">More...</a><br /></td></tr>
+<tr class="memdesc:gae1cf4c8b9eb790d59cf492bf8cbb56a5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get one character from the FIFO.  <a href="#gae1cf4c8b9eb790d59cf492bf8cbb56a5">More...</a><br /></td></tr>
 <tr class="separator:gae1cf4c8b9eb790d59cf492bf8cbb56a5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
@@ -117,8 +117,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>data in the FIFO, retrieve the "first in" and stores it in the memory address of the pointer argument. </p>
-<p>Get one character from the FIFO.</p>
+<p>Get one character from the FIFO. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">FIFO</td><td>A pointer to a FIFO struct with data to be retrieved. </td></tr>
@@ -145,8 +144,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Initialises the FIFO to starting values. </p>
-<p>Initialize the FIFO before first use.</p>
+<p>Initialize the FIFO before first use. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">FIFO</td><td>A pointer to the FIFO that needs initializing. </td></tr>
@@ -181,8 +179,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>gets an 8 bit int and puts it in the correct position of the FIFO buffer if space available. </p>
-<p>Put one character into the FIFO.</p>
+<p>Put one character into the FIFO. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">FIFO</td><td>A pointer to a FIFO struct where data is to be stored. </td></tr>
@@ -200,7 +197,7 @@ Functions</h2></td></tr>
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="footer">Generated on Tue May 2 2017 14:41:37 for Lab3 by
+    <li class="footer">Generated on Wed May 3 2017 11:07:01 for Lab3 by
     <a href="http://www.doxygen.org/index.html">
     <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.10 </li>
   </ul>

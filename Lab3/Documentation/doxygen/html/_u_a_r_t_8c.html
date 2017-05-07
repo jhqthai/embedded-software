@@ -4,7 +4,7 @@
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.10"/>
-<title>Lab3: C:/Users/11990405/Desktop/Lab3_070502/sources/UART.c File Reference</title>
+<title>Lab3: C:/Users/11981521/Desktop/Lab3_070502/sources/UART.c File Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -82,17 +82,17 @@ $(document).ready(function(){initNavTree('_u_a_r_t_8c.html','');});
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
 <tr class="memitem:gae5760d1a086ec79a33901db253000af9"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___u_a_r_t__module.html#gae5760d1a086ec79a33901db253000af9">UART_Init</a> (const uint32_t baudRate, const uint32_t moduleClk)</td></tr>
-<tr class="memdesc:gae5760d1a086ec79a33901db253000af9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialises the registers needed to enable UART, pin and peripheral function and to setup correct baud rate.  <a href="group___u_a_r_t__module.html#gae5760d1a086ec79a33901db253000af9">More...</a><br /></td></tr>
+<tr class="memdesc:gae5760d1a086ec79a33901db253000af9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets up the UART interface before first use.  <a href="group___u_a_r_t__module.html#gae5760d1a086ec79a33901db253000af9">More...</a><br /></td></tr>
 <tr class="separator:gae5760d1a086ec79a33901db253000af9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga03049bcc3bf9af2a75ee77016d3b0d60"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___u_a_r_t__module.html#ga03049bcc3bf9af2a75ee77016d3b0d60">UART_InChar</a> (uint8_t *const dataPtr)</td></tr>
-<tr class="memdesc:ga03049bcc3bf9af2a75ee77016d3b0d60"><td class="mdescLeft">&#160;</td><td class="mdescRight">Used by tower to receive a character from RxFIFO.  <a href="group___u_a_r_t__module.html#ga03049bcc3bf9af2a75ee77016d3b0d60">More...</a><br /></td></tr>
+<tr class="memdesc:ga03049bcc3bf9af2a75ee77016d3b0d60"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a character from the receive FIFO if it is not empty.  <a href="group___u_a_r_t__module.html#ga03049bcc3bf9af2a75ee77016d3b0d60">More...</a><br /></td></tr>
 <tr class="separator:ga03049bcc3bf9af2a75ee77016d3b0d60"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gab20ebaeefd1f29d31e098ade31189dda"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___u_a_r_t__module.html#gab20ebaeefd1f29d31e098ade31189dda">UART_OutChar</a> (const uint8_t data)</td></tr>
-<tr class="memdesc:gab20ebaeefd1f29d31e098ade31189dda"><td class="mdescLeft">&#160;</td><td class="mdescRight">Used by tower to transmit a character to TxFIFO.  <a href="group___u_a_r_t__module.html#gab20ebaeefd1f29d31e098ade31189dda">More...</a><br /></td></tr>
+<tr class="memdesc:gab20ebaeefd1f29d31e098ade31189dda"><td class="mdescLeft">&#160;</td><td class="mdescRight">Put a byte in the transmit FIFO if it is not full.  <a href="group___u_a_r_t__module.html#gab20ebaeefd1f29d31e098ade31189dda">More...</a><br /></td></tr>
 <tr class="separator:gab20ebaeefd1f29d31e098ade31189dda"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga445500277ba0e363873b34cffc015745"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___u_a_r_t__module.html#ga445500277ba0e363873b34cffc015745">__attribute__</a> ((interrupt))</td></tr>
-<tr class="memdesc:ga445500277ba0e363873b34cffc015745"><td class="mdescLeft">&#160;</td><td class="mdescRight">Checks to see if there is a char to read from or write to the relevant FIFO.  <a href="group___u_a_r_t__module.html#ga445500277ba0e363873b34cffc015745">More...</a><br /></td></tr>
-<tr class="separator:ga445500277ba0e363873b34cffc015745"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga1a1ed9b995de07b2b35c3ccfd22aed49"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___u_a_r_t__module.html#ga1a1ed9b995de07b2b35c3ccfd22aed49">__attribute__</a> ((interrupt)) UART_ISR(void)</td></tr>
+<tr class="memdesc:ga1a1ed9b995de07b2b35c3ccfd22aed49"><td class="mdescLeft">&#160;</td><td class="mdescRight">Interrupt service routine for the UART.  <a href="group___u_a_r_t__module.html#ga1a1ed9b995de07b2b35c3ccfd22aed49">More...</a><br /></td></tr>
+<tr class="separator:ga1a1ed9b995de07b2b35c3ccfd22aed49"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>I/O implementation for UART communications on the TWR-K70F120M. </p>
@@ -105,7 +105,7 @@ Functions</h2></td></tr>
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
     <li class="navelem"><a class="el" href="dir_08d237fc27d4ecd563f71c5d52f2fecc.html">sources</a></li><li class="navelem"><a class="el" href="_u_a_r_t_8c.html">UART.c</a></li>
-    <li class="footer">Generated on Tue May 2 2017 14:41:37 for Lab3 by
+    <li class="footer">Generated on Wed May 3 2017 11:07:01 for Lab3 by
     <a href="http://www.doxygen.org/index.html">
     <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.10 </li>
   </ul>
