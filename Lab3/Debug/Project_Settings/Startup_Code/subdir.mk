@@ -17,7 +17,7 @@ C_DEPS += \
 Project_Settings/Startup_Code/%.o: ../Project_Settings/Startup_Code/%.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: Cross ARM C Compiler'
-	arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -O0 -fmessage-length=0 -fsigned-char -ffunction-sections -fdata-sections  -g3 -I"C:/Users/11990405/Desktop/Lab3_070424/Static_Code/IO_Map" -I"C:/Users/11990405/Desktop/Lab3_070424/Sources" -I"C:/Users/11990405/Desktop/Lab3_070424/Generated_Code" -I"C:/Users/11990405/Desktop/Lab3_070424/Static_Code/PDD" -std=c99 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$@" -c -o "$@" "$<"
+	arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -O0 -fmessage-length=0 -fsigned-char -ffunction-sections -fdata-sections  -g3 -I"C:/Users/11990405/Desktop/Lab3_070428/Static_Code/IO_Map" -I"C:/Users/11990405/Desktop/Lab3_070428/Sources" -I"C:/Users/11990405/Desktop/Lab3_070428/Generated_Code" -I"C:/Users/11990405/Desktop/Lab3_070428/Static_Code/PDD" -std=c99 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$@" -c -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 

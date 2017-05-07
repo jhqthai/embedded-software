@@ -59,10 +59,25 @@ bool UART_Init(const uint32_t baudRate, const uint32_t moduleClk)
   //Set the bottom 5 bits of c4 to that of baud rate fine adjust (brfa)
   UART2_C4 |=  UART_C4_BRFA(brfa);
 
+
+  //Enable UART2 C2 Receiver
+  UART2_C2 |= UART_C2_RIE_MASK;
+  //Enable UART 2 C2 Transmitter
+  UART2_C2 |= UART_C2_TIE_MASK;
+
   //Enable UART2 C2 Receiver
   UART2_C2 |= UART_C2_RE_MASK;
   //Enable UART 2 C2 Transmitter
   UART2_C2 |= UART_C2_TE_MASK;
+
+  // Initialize NVIC
+  // see p. 91 of K70P256M150SF3RM.pdf
+  // Vector 0x41=65, IRQ=49
+  // NVIC non-IPR=1 IPR=12
+  // Clear any pending interrupts on LPTMR
+  NVICICPR1 = (1 << 17); //IRQ mod 32 (p.92 K70)
+  // Enable interrupts from LPTMR module
+  NVICISER1 = (1 << 17);
 
   FIFO_Init(&RxFIFO);
   FIFO_Init(&TxFIFO);
@@ -82,7 +97,12 @@ bool UART_InChar(uint8_t * const dataPtr)
  */
 bool UART_OutChar(const uint8_t data)
 {
-  return FIFO_Put(&TxFIFO, data);
+	if (FIFO_Put(&TxFIFO, data))
+	{
+		UART2_C2 |= UART_C2_TIE_MASK; //Set interrupt
+		return true;
+	}
+	return false;
 }
 
 
@@ -93,22 +113,19 @@ bool UART_OutChar(const uint8_t data)
 
 void __attribute__ ((interrupt)) UART_ISR (void)
 {
-	// Receive a character
-	if (UART2_C2 & UART_C2_RIE_MASK)
+
+	if(UART2_C2 & UART_C2_RIE_MASK) //Read for this is cause from PC
 	{
 		// Clear RDRF flag by reading the status register
-		// Checks UART2_S1 "RDRF" bit -> 1 indicates we should read UART_D and write to RxFIFO
 		if (UART2_S1 & UART_S1_RDRF_MASK)
 			FIFO_Put(&RxFIFO, UART2_D);
 	}
 
-	// Transmit a character
-	if (UART2_C2 & UART_C2_TIE_MASK)
+	// Clear TDRE flag by reading the status register
+	if(UART2_S1 & UART_S1_TDRE_MASK)
 	{
-		// Clear TDRE flag by reading the status register
-		// Checks UART2_S1 "TDRE" bit -> 1 indicates we should read TxFIFO and write to UART_D
-		if (UART2_S1 & UART_S1_TDRE_MASK)
-		 FIFO_Get(&TxFIFO, &UART2_D);
+		if (!(FIFO_Get(&TxFIFO, &UART2_D)))
+			UART2_C2 &= ~UART_C2_TIE_MASK; //Clears Interrupt
 	}
 }
 

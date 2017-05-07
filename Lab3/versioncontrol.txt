@@ -1,4 +1,26 @@
-changed constant convention in main.c
+24/04/07
+
+Changed constant convention in main.c
+
 changed ISR address name in Vector.c
-crictical section manage in fifo.c
-change UART polling to UART_ISR in UART.c
+
+
+Crictical section manage in fifo.c
+
+
+Change UART polling to UART_ISR in UART.c
+
+
+
+
+26/04/07
+
+
+UART_ISR fixes
+
+
+27/04/07
+
+Added doxygen
+
+Added c files

@@ -7,9 +7,14 @@
  *  @author PMcL
  *  @date 2015-09-04
  */
+/*!
+ *  @addtogroup FTM_module FTM module documentation
+ *  @{
+ */
 
 #ifndef FTM_H
 #define FTM_H
+/* MODULE FTM */
 
 // new types
 #include "types.h"
@@ -92,3 +97,8 @@ bool FTM_StartTimer(const TFTMChannel* const aFTMChannel);
 void __attribute__ ((interrupt)) FTM0_ISR(void);
 
 #endif
+
+/*!
+** @}
+*/
+
