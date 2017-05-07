@@ -7,11 +7,6 @@
  *  @author PMcL
  *  @date 2015-07-23
  */
-/*!
- * @addtogroup UART_module UART module documentation
- * @{
- */
-/* MODULE UART */
 
 #ifndef UART_H
 #define UART_H
@@ -57,8 +52,3 @@ void UART_Poll(void);
 void __attribute__ ((interrupt)) UART_ISR(void);
 
 #endif
-
-/*!
-** @}
-*/
-

@@ -7,15 +7,9 @@
  *  @author PMcL
  *  @date 2015-08-15
  */
-/*!
- * @addtogroup LED_module LED module documentation
- * @{
- */
 
 #ifndef LEDS_H
 #define LEDS_H
-/* MODULE LED */
-
 
 // new types
 #include "types.h"
@@ -59,8 +53,3 @@ void LEDs_Off(const TLED color);
 void LEDs_Toggle(const TLED color);
 
 #endif
-
-/*!
-** @}
-*/
-

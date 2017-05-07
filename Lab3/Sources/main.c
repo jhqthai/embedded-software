@@ -39,7 +39,6 @@
 #include "packet.h"
 #include "LEDs.h"
 #include "Flash.h"
-#include "PIT.h"
 
 // Defining constants
 #define CMD_SGET_STARTUP 0x04
@@ -188,17 +187,6 @@ bool Packet_Processor(void)
 }
 
 
-// User callback function?
-void PITCallback(void* arg)
-{
-	// Clear flag by set bit to 1
-  PIT_TFLG0 |= PIT_TFLG_TIF_MASK;
-
-  // Wait for the PIT interrupt flag to clear ????
-  while (PIT_TFLG0)
-    ;
-  LEDs_Toggle(LED_GREEN);
-}
 
 /*lint -save  -e970 Disable MISRA rule (6.3) checking. */
 int main(void)
@@ -211,10 +199,6 @@ int main(void)
   /*** End of Processor Expert internal initialization.                    ***/
 
   /* Write your code here */
-
-  //Disable Interrupt
-  __DI();
-
   //Init Packet
   bool packInit = Packet_Init(BAUD_RATE, CPU_BUS_CLK_HZ);
 
@@ -248,10 +232,12 @@ int main(void)
   Packet_Command = CMD_SGET_STARTUP;
   Packet_Processor();
 
-  __EI();
   for (;;)
   {
-  	//If a valid packet is received
+    //Check the status of UART hardware
+    UART_Poll();
+
+    //If a valid packet is received
     if (Packet_Get())
       Packet_Processor(); //Handle packet according to the command byte
   }
