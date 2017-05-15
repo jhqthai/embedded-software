@@ -23,6 +23,8 @@ typedef enum
 	mul2 = 0x04,
 }mulVal; // naming convention
 
+static uint8_t SlaveAddr;
+
 uint16_t sclDividerValues[] = {20,22,24,26,28,30,32,34,36,40,44,48,56,64,68,
 		72,80,88,96,104,112,128,144,160,192,224,240,256,288,320,384,448,480,512,
 		576,640,768,896,960,1024,1152,1280,1536,1792,1920,2048,2304,2560,3072,3840};
@@ -36,7 +38,7 @@ uint16_t sclDividerValues[] = {20,22,24,26,28,30,32,34,36,40,44,48,56,64,68,
  */
 bool I2C_Init(const TI2CModule* const aI2CModule, const uint32_t moduleClk)
 {
-	(uin32_t) receivedBaudRate = aI2CModule->baudRate; // Check naming convention again!
+	(uint32_t) receivedBaudRate = aI2CModule->baudRate; // Check naming convention again!
 
 	// Enable I2C module clock gate
 	SIM_SCGC4 |= SIM_SCGC4_IIC0_MASK;
@@ -56,13 +58,14 @@ bool I2C_Init(const TI2CModule* const aI2CModule, const uint32_t moduleClk)
 	// Clear I2C module operation
 	I2C0_C1 = 0;
 
-	// Disable I2C general call address
-	//I2C0_C2 &= ~I2C_C2_GCAEN_MASK;
-
 	// Clear I2C glitch filter
 	I2C0_FLT = 0;
 
-	//baud rate
+	// Disable I2C general call address
+	//I2C0_C2 &= ~I2C_C2_GCAEN_MASK;
+
+	// baud rate
+	// exhaustive search to find an achievable baud rate that is closest to the requested baud rate
 	// I2C baud rate = I2C module clock speed (Hz)/(mul × SCL divider)
 	//x = receivedbaudrate/moduleClk;
 	uint8_t mulCount = 0;
@@ -80,8 +83,8 @@ bool I2C_Init(const TI2CModule* const aI2CModule, const uint32_t moduleClk)
 			if (tempBaudRate < receivedBaudRate && prescaleBaudRate < tempBaudRate)
 			{
 				prescaleBaudRate = tempBaudRate;
-				I2C0_F = I2C_F_MULT(mulCount);
-				I2C0_F = I2C_F_ICR(prescaleBaudRate);
+				I2C0_F = I2C_F_MULT(mulCount); // Set most achievable mul
+				I2C0_F = I2C_F_ICR(prescaleBaudRate); // Set most achievable baudrate
 			}
 		}
 	}
@@ -92,12 +95,6 @@ bool I2C_Init(const TI2CModule* const aI2CModule, const uint32_t moduleClk)
 	// Enable I2C interrupt
 	I2C0_C1 |= I2C_C1_IICIE_MASK;
 
-	// Enable I2C general call address
-	//I2C0_C2 |= I2C_C2_GCAEN_MASK;
-
-	// set slaves module
-	//IC20_C2 =  I2C_C2_AD(aI2CModule->primarySlaveAddress);
-
 	//Initilise NVIC
 	// Clear any pending interrupt on I2C
 	NVICICPR0 = (1<<24);
@@ -107,7 +104,6 @@ bool I2C_Init(const TI2CModule* const aI2CModule, const uint32_t moduleClk)
 
 	return true;
 
-
 }
 
 /*! @brief Selects the current slave device
@@ -116,7 +112,7 @@ bool I2C_Init(const TI2CModule* const aI2CModule, const uint32_t moduleClk)
  */
 void I2C_SelectSlaveDevice(const uint8_t slaveAddress)
 {
-
+	SlaveAddr = slaveAddress;
 }
 
 /*! @brief Write a byte of data to a specified register
@@ -126,6 +122,30 @@ void I2C_SelectSlaveDevice(const uint8_t slaveAddress)
  */
 void I2C_Write(const uint8_t registerAddress, const uint8_t data)
 {
+	// Check for pending interrupt flag
+	while (I2C0_S & I2C_S_IICIF_MASK);
+
+	// Wait for bus idle
+	while (I2C0_S | I2C_S_BUSY_MASK);
+
+	// Start signal and transmit mode
+	I2C0_C1 |= I2C_C1_MST_MASK | I2C_C1_TX_MASK;
+
+	// 1st byte - slave address (7 bits) + write (1 bit)
+	I2C0_D = (slaveAddress << 1) | 0x00;
+
+	// 2nd byte - Register address
+	I2C0_D = registerAddress;
+
+	// 3rd byte - slave address (7 bits) + read (1 bit)
+	I2C0_D = (slaveAddress << 1) | 0x01;
+
+	// Check if process is completed?
+
+	// Stop signal
+
+	// Clear interrupt flag
+
 
 }
 
@@ -138,7 +158,11 @@ void I2C_Write(const uint8_t registerAddress, const uint8_t data)
  */
 void I2C_PollRead(const uint8_t registerAddress, uint8_t* const data, const uint8_t nbBytes)
 {
-
+	// each uint8 send to I2C0_D
+	// Wait for bus idle
+	// 1st byte - slave address (7 bits) + write (1 bit)
+	// 2nd byte - Register address
+	// 3rd byte - slave address (7 bits) + read (1 bit)
 }
 
 /*! @brief Reads data of a specified length starting from a specified register
@@ -150,7 +174,10 @@ void I2C_PollRead(const uint8_t registerAddress, uint8_t* const data, const uint
  */
 void I2C_IntRead(const uint8_t registerAddress, uint8_t* const data, const uint8_t nbBytes)
 {
-
+	// Wait for bus idle
+	// 1st byte - slave address (7 bits) + write (1 bit)
+	// 2nd byte - Register address
+	// 3rd byte - slave address (7 bits) + read (1 bit)
 }
 
 /*! @brief Interrupt service routine for the I2C.
