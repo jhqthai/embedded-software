@@ -209,6 +209,17 @@ bool Accel_Init(const TAccelSetup* const accelSetup)
   ARCCallback = accelSetup->readCompleteCallbackFunction;
   ARCArgs = accelSetup->readCompleteCallbackArguments;
 
+	// Pass on the slave address, module clock and relevant callbacks
+	TI2CModule I2CModule = {
+		MMA_ADDR_SA0H,
+		100000,
+		ARCCallback,
+		ARCArgs
+	};
+
+	// Initialise I2C
+	I2C_Init(&I2CModule, AccModuleClk);
+
 	// Enable PORTB module clock gate
 	SIM_SCGC5 |= SIM_SCGC5_PORTB_MASK;
 
@@ -221,30 +232,13 @@ bool Accel_Init(const TAccelSetup* const accelSetup)
 	// Set enable interrupts
 	NVICISER2 = (1 << 24);
 
-	// Pass on the slave address, module clock and relevant callbacks
-	TI2CModule I2CModule = {
-		MMA_ADDR_SA0H,
-		100000,
-		ARCCallback,
-		ARCArgs
-	};
-
-	// Initialise I2C
-	I2C_Init(&I2CModule, AccModuleClk);
-
-	// Select slave device
-	I2C_SelectSlaveDevice(MMA_ADDR_SA0H);
-
-	// Verify slave is who it's meant to be
-	uint8_t whoAmIResult;
-	I2C_PollRead(WHO_AM_I_REG_ADDR, &whoAmIResult, 1); //request 1 byte from the 'who am i' ID register
-	//if(whoAmIResult != 0x1A) //ID of accelerometer is 0x1A (MMA.pdf p.20)
-	//	return false; //if it does not match, something has gone wrong
-
 	// Control register 1 - Set relevant masks
+	// Disable active mode before setting values
+	// Keeps normal mode for low noise
 	// Init with a rate of 1.56 Hz
+	CTRL_REG1_ACTIVE = 0;
 	CTRL_REG1_DR = DATE_RATE_1_56_HZ;
-	//CTRL_REG1_LNOISE = 0;
+	CTRL_REG1_LNOISE = 0;
 	CTRL_REG1_ASLP_RATE = SLEEP_MODE_RATE_1_56_HZ;
 	I2C_Write(ADDRESS_CTRL_REG1, CTRL_REG1);
 
@@ -258,12 +252,17 @@ bool Accel_Init(const TAccelSetup* const accelSetup)
 
 	// Control register 4 - Set relevant masks
 	// Disable data ready interrupts
-	CTRL_REG5_INT_CFG_DRDY = 0;
+	CTRL_REG4_INT_EN_DRDY = 0;
 	I2C_Write(ADDRESS_CTRL_REG4, CTRL_REG4);
 
 	// Control register 5
 	// Set data ready interrupt to use INT1 pin	(set fken everything enabled)
 	I2C_Write(ADDRESS_CTRL_REG5, CTRL_REG5);
+
+	// Control register 1
+	// Activate active mode after setting values
+		CTRL_REG1_ACTIVE = 1;
+		I2C_Write(ADDRESS_CTRL_REG1, CTRL_REG1);
 }
 
 
@@ -278,43 +277,52 @@ void Accel_ReadXYZ(uint8_t data[3])
 
 void Accel_SetMode(const TAccelMode mode)
 {
+	// Disable active mode before setting values
+	CTRL_REG1_ACTIVE = 0;
+	I2C_Write(ADDRESS_CTRL_REG1, CTRL_REG1);
+
 	// Interrupt mode = Accelerometer interrupts when data is ready
 	if (mode == ACCEL_INT)
 	{
 		// Enable data ready interrupt
-		CTRL_REG5_INT_CFG_DRDY = 1;
+		CTRL_REG4_INT_EN_DRDY = 1;
 		I2C_Write(ADDRESS_CTRL_REG4, CTRL_REG4);
-		I2C0_C1 &= ~I2C_C1_IICIE_MASK; // NEED COMMENT WHY?
+		I2C0_C1 &= ~I2C_C1_IICIE_MASK; // Enable interrupt service
 	}
 
 	// Poll mode = I2C Master initiates read of data from accelerometer slave
 	else
 	{
 		// Disable data ready interrupt
-		CTRL_REG5_INT_CFG_DRDY = 0;
+		CTRL_REG4_INT_EN_DRDY = 0;
 		I2C_Write(ADDRESS_CTRL_REG4, CTRL_REG4);
-		I2C0_C1 |= I2C_C1_IICIE_MASK; // NEED COMMENT WHY?
+		I2C0_C1 |= I2C_C1_IICIE_MASK; // Disable interrupt service
 	}
+	// Activate active mode after setting values
+	CTRL_REG1_ACTIVE = 1;
+	I2C_Write(ADDRESS_CTRL_REG1, CTRL_REG1);
 }
-
 
 
 void __attribute__ ((interrupt)) AccelDataReady_ISR(void)
 {
+  //Local Data declaration
+  uint8_t data[1];
 
-	// Check if configured interrupt is enabled
-	if (PORTB_PCR4 & PORT_PCR_IRQC_MASK)
-	{
-		// Check if flag is set
-		if (PORTB_PCR4 & PORT_PCR_ISF_MASK)
-		{
-			// Clear POIRTB interrupt
-			PORTB_PCR4 |= PORT_PCR_ISF_MASK;
+  PORTB_ISFR |= PORT_ISFR_ISF(4);
 
-			// Sends the data through to main as an argument
-			(ADRCallback)(ADRArgs);
-		}
-	}
+  //Run I2C read function with the applicable data and generates a size of the variable, data
+  I2C_IntRead(ADDRESS_INT_SOURCE, data, sizeof(data));
+  //By reading the out INT_SOURCE Register it can be confirmed what interrupt type is incoming
+  INT_SOURCE = data[0];
+
+
+  //Condition statement for the Data Ready Interrupt Status - indication that new data is present
+  if (INT_SOURCE_SRC_DRDY == 1)
+  {
+    //If true, a data Ready interrupt has occurred and the dataReadyCallbackFunction is to be invoked
+  		ADRCallback(ADRArgs);
+  }
 }
 
 

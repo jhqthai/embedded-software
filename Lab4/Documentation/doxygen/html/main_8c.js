@@ -16,6 +16,5 @@ var main_8c =
     [ "PacketProcessor", "group__main__module.html#ga7b1865d569a27a62a900abbbfbeed832", null ],
     [ "PITCallback", "group__main__module.html#ga83e32d3437f8fdbf06974d23242a9462", null ],
     [ "RTCCallback", "group__main__module.html#ga2dabe81b72bf8ec8155cd875975beb07", null ],
-    [ "SendMeanAccelPacket", "group__main__module.html#gaa36ca8960d398c71518e7ae5016d1630", null ],
-    [ "modeAccel", "group__main__module.html#gade27ed228f23571cc29f1ae19b3e78fe", null ]
+    [ "SendMeanAccelPacket", "group__main__module.html#gaa36ca8960d398c71518e7ae5016d1630", null ]
 ];

@@ -1,2 +1,15 @@
 15/05/17
 I2C.c completed, not tested.
+
+16/05/17
+I2C.c polling partially working.
+Main.c changed to accomodate I2C.c and Accel.c
+
+
+17/05/17
+Added Median.c
+Accel.c edited
+I2C.c edited to try ISR.
+
+Todo:
+Fix problem in I2C.c busy mask.  

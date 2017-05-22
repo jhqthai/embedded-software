@@ -43,7 +43,7 @@ bool FIFO_Put(TFIFO * const FIFO, const uint8_t data)
     FIFO->End = 0;
   ExitCritical();
 
-  return false;
+  return true;
 }
 
 

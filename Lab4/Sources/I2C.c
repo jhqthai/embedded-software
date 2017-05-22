@@ -24,6 +24,8 @@ static uint8_t TxNumBytes; // Number of bytes requested
 static void (*I2CCallback)(void*); // User callback function pointer
 static void* I2CArguments; // User arguments pointer to use with user callback function
 
+static uint8_t InterruptCount;
+
 // Arrays for I2C baud rate calculation (K70 p.1863)
 const static uint8_t MUL_VAL [] = {0x01, 0x02, 0x04 };
 const static uint16_t SCL_DIV_VAL[] = {20,22,24,26,28,30,32,34,36,40,44,48,56,64,68,
@@ -84,8 +86,12 @@ bool I2C_Init(const TI2CModule* const aI2CModule, const uint32_t moduleClk)
 	PORTE_PCR18 |= PORT_PCR_ODE_MASK;
 	PORTE_PCR19 |= PORT_PCR_ODE_MASK;
 
-	// Clear I2C module operation
-	I2C0_C1 = 0;
+ //Set for Control Register 1
+	I2C0_C1 &= ~I2C_C1_MST_MASK; //Set for Master Mode Select - Slave mode
+	I2C0_C1 &= ~I2C_C1_WUEN_MASK; //Set for Wakeup Enable - Normal operation. No interrupt generated when address matching in low power mode
+	I2C0_C1 &= ~I2C_C1_DMAEN_MASK; //Set for DMA Enable - All DMA signaling disabled
+	I2C0_C1 &= ~I2C_C1_IICIE_MASK; //Set for IICIE - Disable of I2C interrupt requests
+
 	// Clear I2C glitch filter
 	I2C0_FLT = 0;
 
@@ -117,7 +123,7 @@ bool I2C_Init(const TI2CModule* const aI2CModule, const uint32_t moduleClk)
 	}
 
 	// Initial slave routine selection (NEW)
-	I2C_SelectSlaveDevice(SlaveAddr);
+	//I2C_SelectSlaveDevice(SlaveAddr);
 
 	// Enable I2C interrupt
 	//I2C0_C1 |= I2C_C1_IICIE_MASK;
@@ -142,11 +148,20 @@ void I2C_SelectSlaveDevice(const uint8_t slaveAddress)
 	SlaveAddr = slaveAddress;
 }
 
+// MOVE ME (FIX)
+static bool I2CBusWait ()
+{
+	// Wait for bus idle
+	if ((I2C0_S & I2C_S_BUSY_MASK) == I2C_S_BUSY_MASK)
+		return true;
+	return false;
+}
 
 void I2C_Write(const uint8_t registerAddress, const uint8_t data)
 {
+
 	// Wait for bus idle
-	while ((I2C0_S & I2C_S_BUSY_MASK) == I2C_S_BUSY_MASK);
+	I2CBusWait();
 
 	// Start signal and transmit mode
 	I2C0_C1 |= (I2C_C1_MST_MASK | I2C_C1_TX_MASK);
@@ -180,6 +195,10 @@ void I2C_Write(const uint8_t registerAddress, const uint8_t data)
  */
 void I2C_PollRead(const uint8_t registerAddress, uint8_t* const data, const uint8_t nbBytes)
 {
+	// Set variables to global variables for interrupt
+	ReadDestination = data;
+	TxNumBytes = nbBytes;
+
 	// Wait for bus idle
 	while ((I2C0_S & I2C_S_BUSY_MASK) == I2C_S_BUSY_MASK) ;
 
@@ -202,9 +221,8 @@ void I2C_PollRead(const uint8_t registerAddress, uint8_t* const data, const uint
 	I2C0_D = RegAddr;
 	I2CInterruptWait();
 
-	// Start repeat and transmit (CHANGE ME BACK!!!)
+	// Start repeat
 	I2C0_C1 |= (I2C_C1_RSTA_MASK);
-	//I2C0_C1 |= (I2C_C1_TX_MASK);
 
 	// 3rd byte - slave address (7 bits) + read (1 bit)
 	I2C0_D = (SlaveAddr << 1) | 0x01;
@@ -212,43 +230,20 @@ void I2C_PollRead(const uint8_t registerAddress, uint8_t* const data, const uint
 
 	// Select receive mode
 	I2C0_C1 &= ~I2C_C1_TX_MASK;
-	I2C0_C1 &= ~I2C_C1_TXAK_MASK; // (NEW)
 
-
-	// not sure why this? (NEW)
-	data[0] = I2C0_D;
-	I2CInterruptWait();
-
-	/*// NEED COMMENT
-	int count;
-	ReadDestination = data;
-	TxNumBytes = nbBytes;
-
-	// NEED COMMENT
-	for(count=0; count<TxNumBytes; count++)
+	// Check each byte before last byte and AK it
+	for(int count = 0; count < TxNumBytes - 1; count++)
 	{
 		*ReadDestination = I2C0_D;
 		I2CInterruptWait();
+		I2C0_C1 &= ~I2C_C1_TXAK_MASK; // AK
 
 		ReadDestination++;
-
-		if(count == TxNumBytes-1)
-			I2C0_C1 |= I2C_C1_TXAK_MASK; // NAK = 1
-
-		else
-			I2C0_C1 &= ~I2C_C1_TXAK_MASK; // ACK = 0
 	}
-	I2CInterruptWait();*/
-
-	for (int i = 0; i < nbBytes - 1; i++)
-	  {
-	    data[i] = I2C0_D;
-	    I2CInterruptWait();
-	  }
-
-	  I2C0_C1 |= I2C_C1_TXAK_MASK;			// Write: Control Register 1 to send Not acknowledge signal
-	  data[nbBytes-1] = I2C0_D;
-    I2CInterruptWait();
+	// otherwise last byte NAK
+	I2C0_C1 |= I2C_C1_TXAK_MASK; // NAK = 1
+	ReadDestination[TxNumBytes-1] = I2C0_D;
+	I2CInterruptWait();
 
 	I2CStop();
 
@@ -257,18 +252,41 @@ void I2C_PollRead(const uint8_t registerAddress, uint8_t* const data, const uint
 
 void I2C_IntRead(const uint8_t registerAddress, uint8_t* const data, const uint8_t nbBytes)
 {
+	/*
 	// Enable I2C interrupt service
 	I2C0_C1 |= I2C_C1_IICIE_MASK;
 
-	// NEED COMMENT
+	// Runs PollRead routine
 	I2C_PollRead(registerAddress, data, nbBytes);
 	I2CInterruptWait();
+	*/
+
+	// Wait for bus idle
+	while ((I2C0_S & I2C_S_BUSY_MASK) == I2C_S_BUSY_MASK);
+
+	TxNumBytes = nbBytes;
+	ReadDestination = data;
+	InterruptCount = 0;
+
+	I2C0_C1 |= (I2C_C1_MST_MASK | I2C_C1_TX_MASK); // Start and set to Transmit
+	I2C0_D = (SlaveAddr << 1 | 0x00);			// Slave address transmission with write
+	I2CInterruptWait();
+	I2C0_D = registerAddress;			// Register address to write to
+	I2CInterruptWait();
+	I2C0_C1 |= I2C_C1_RSTA_MASK;			// Repeat Start
+	I2C0_D = ((SlaveAddr << 1) | 0x01);		// Slave address transmission with read
+	I2CInterruptWait();
+
+  I2C0_C1 &= ~I2C_C1_TX_MASK;			// Write: Control Register 1 to enable RX
+
+	I2CStop();
 
 }
 
 
 void __attribute__ ((interrupt)) I2C_ISR(void)
 {
+	/*
 	// Handle interrupt
 	// Check if interrupt is enabled
 	if ((I2C0_C1 & I2C_C1_IICIE_MASK))
@@ -287,7 +305,31 @@ void __attribute__ ((interrupt)) I2C_ISR(void)
 	// Handle callback
 	if (I2CCallback)
 		(*I2CCallback)(I2CArguments);
+	*/
 
+
+  I2C0_S |= I2C_S_IICIF_MASK;
+  if (I2C0_S & I2C_S_TCF_MASK)
+    {
+      if (!(I2C0_C1 & I2C_C1_TX_MASK))	// If receiving is set
+      {
+	if (TxNumBytes > 1)
+	{
+			ReadDestination[InterruptCount] = I2C0_D;
+	}
+	else
+	{
+
+	  I2C0_C1 |= I2C_C1_TXAK_MASK;
+	  ReadDestination[InterruptCount] = I2C0_D;
+	  I2CStop();
+	}
+	TxNumBytes--;
+	InterruptCount++;
+      }
+    }
+
+  I2CCallback(I2CArguments);
 }
 
 /*!

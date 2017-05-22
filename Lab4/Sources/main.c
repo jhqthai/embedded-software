@@ -93,11 +93,15 @@ static TFTMChannel FTMChannel1 =
 	NULL // FTM user argument
 };
 
-// NEED COMMENT
-TAccelMode modeAccel;
+
+
+// Initialise accel mode variable
+static TAccelMode modeAccel;
+
+// Initialise accel Poll flag
 static bool pollI2C;
 
-// NEED COMMENT
+// Initialise variable to store accel history
 static TAccelData AccelData[ACCEL_DATA_SIZE];
 
 /*! Reads the command byte and processes relevant functionality
@@ -116,11 +120,11 @@ bool PacketProcessor(void)
     case CMD_SGET_STARTUP:
       if ((Packet_Parameter1 | Packet_Parameter2 | Packet_Parameter3) == 0)
       {
-        Packet_Put(CMD_SGET_STARTUP, 0x0, 0x0, 0x0);
-        Packet_Put(CMD_SGET_VERSION, 0x76, 0x03, 0x00);
-        Packet_Put(CMD_TOWER_NUMBER, 0x01, NvTowerNb->s.Lo, NvTowerNb->s.Hi);
-        Packet_Put(CMD_TOWER_MODE, 0x01, NvTowerMd->s.Lo, NvTowerMd->s.Hi);
-        success = true;
+        success = Packet_Put(CMD_SGET_STARTUP, 0x0, 0x0, 0x0);
+        success &= Packet_Put(CMD_SGET_VERSION, 0x76, 0x03, 0x00);
+        success &= Packet_Put(CMD_TOWER_NUMBER, 0x01, NvTowerNb->s.Lo, NvTowerNb->s.Hi);
+        success &= Packet_Put(CMD_TOWER_MODE, 0x01, NvTowerMd->s.Lo, NvTowerMd->s.Hi);
+        success &= Packet_Put(CMD_PROTO_MODE, 0x01, modeAccel, 0x00);
       }
       else
         success = false;
@@ -130,8 +134,7 @@ bool PacketProcessor(void)
     case CMD_SGET_VERSION:
       if ((Packet_Parameter1 == 0x76) & (Packet_Parameter2 == 0x78) & (Packet_Parameter3 == 0x0D))
       {
-        Packet_Put(CMD_SGET_VERSION, 0x76, 0x03, 0x00);
-        success = true;
+        success = Packet_Put(CMD_SGET_VERSION, 0x76, 0x03, 0x00);
       }
       else
         success = false;
@@ -148,7 +151,7 @@ bool PacketProcessor(void)
       else if ((Packet_Parameter1 == 0x02))
       {
       	success = Flash_Write16((uint16_t*)NvTowerNb, Packet_Parameter23);
-				Packet_Put(CMD_TOWER_NUMBER, 0x01, NvTowerNb->s.Lo, NvTowerNb->s.Hi);
+      	success &= Packet_Put(CMD_TOWER_NUMBER, 0x01, NvTowerNb->s.Lo, NvTowerNb->s.Hi);
       }
 			else
         success = false;
@@ -160,15 +163,14 @@ bool PacketProcessor(void)
     	//Get tower mode
       if ((Packet_Parameter1 == 0x01) & (Packet_Parameter2 == 0x00) & (Packet_Parameter3 == 0x00))
       {
-      	Packet_Put(CMD_TOWER_MODE, 0x01, NvTowerMd->s.Lo, NvTowerMd->s.Hi); //
-      	success = true;
+      	success = Packet_Put(CMD_TOWER_MODE, 0x01, NvTowerMd->s.Lo, NvTowerMd->s.Hi);
       }
 
       //Set tower mode
       else if ((Packet_Parameter1 == 0x02))
       {
       	success =  Flash_Write16((uint16_t*)NvTowerMd, Packet_Parameter23);
-				Packet_Put(CMD_TOWER_MODE, 0x01, NvTowerMd->s.Lo, NvTowerMd->s.Hi);
+      	success &= Packet_Put(CMD_TOWER_MODE, 0x01, NvTowerMd->s.Lo, NvTowerMd->s.Hi);
       }
 			else
 	    success = false;
@@ -223,17 +225,19 @@ bool PacketProcessor(void)
     // Case Protocol mode
     case CMD_PROTO_MODE:
     	// Set protocol mode
-    	if ((Packet_Parameter1==1) && (Packet_Parameter3 == 0))
+    	if ((Packet_Parameter1==2) && (Packet_Parameter3 == 0))
     	{
     		if(Packet_Parameter2) // Set to int/synch mode
     			modeAccel = ACCEL_INT;
     		else // Set to poll/asynch mode
     			modeAccel = ACCEL_POLL;
     		Accel_SetMode(modeAccel);
+    		success = true;
     	}
     	// Get protocol mode
-    	if ((Packet_Parameter1==2) && (Packet_Parameter2 == Packet_Parameter3 == 0))
-    		Packet_Put(CMD_PROTO_MODE, 0x01, modeAccel, 0x00);
+    	if ((Packet_Parameter1==1) && (Packet_Parameter2 == 0) && (Packet_Parameter3 == 0))
+    		success = Packet_Put(CMD_PROTO_MODE, 0x01, modeAccel, 0x00);
+    	break;
 
     default:
       success = false;
@@ -313,7 +317,10 @@ void I2CPollCallback(void* arg)
 	pollI2C = true;
 }
 
-// NEED COMMENT
+/*! @brief Calculates median xyz values and sends it to pc
+ *
+ * @return void
+ */
 void SendMeanAccelPacket()
 {
 	uint8_t xMed = Median_Filter3(AccelData[0].axes.x, AccelData[1].axes.x, AccelData[2].axes.x);
@@ -325,8 +332,6 @@ void SendMeanAccelPacket()
 
 
 /*! @brief Gets incoming xyz data via interrupt and adds it to the AccelData history
- *
- *	Used for calculating the median
  *
  * @return void
  */
@@ -342,8 +347,8 @@ void HandleAccelIntRead()
 	latestData.axes.y = newData[1];
 	latestData.axes.z = newData[2];
 
-	int history;
-	for(history = ACCEL_DATA_SIZE; history>0; history--) //shifts current data down - freeing up 0 index
+	// Shifts current data down - freeing up 0 index
+	for(int history = ACCEL_DATA_SIZE; history>0; history--)
 	{
 		AccelData[history] = AccelData[history-1];
 	}
@@ -357,9 +362,18 @@ void HandleAccelIntRead()
  */
 void HandleAccelPollRead()
 {
+	// Shifts current data down - freeing up 0 index
+	for(int history = ACCEL_DATA_SIZE; history>0; history--)
+	{
+		AccelData[history] = AccelData[history-1];
+	}
+
+
 	// Gets the latest accel data
-	uint8_t newData[3];
-	I2C_PollRead(0x1D, &newData[3], 3);
+	uint8_t newData[3] = {0x00, 0x00, 0x00};
+
+	I2C_IntRead(0x1D, &newData[0], 3);
+
 
 	// Stores in struct
 	TAccelData latestData;
@@ -367,19 +381,13 @@ void HandleAccelPollRead()
 	latestData.axes.y = newData[1];
 	latestData.axes.z = newData[2];
 
-	int history;
 
-	// Shifts current data down - freeing up 0 index
-	for(history = ACCEL_DATA_SIZE; history>0; history--)
-	{
-		AccelData[history] = AccelData[history-1];
-	}
 	// Places new data in 0 index
 	AccelData[0] = latestData;
 	SendMeanAccelPacket();
 }
 
-// NEED COMMENT
+// Initialise Accelerometer setup
 static TAccelSetup AccelSetup =
 {
 	CPU_BUS_CLK_HZ,
@@ -388,7 +396,6 @@ static TAccelSetup AccelSetup =
 	&HandleAccelPollRead,
 	(void *) 0
 };
-
 
 
 /*lint -save  -e970 Disable MISRA rule (6.3) checking. */
