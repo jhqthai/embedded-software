@@ -4,7 +4,7 @@
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.10"/>
-<title>Lab1: C:/Users/PMcL/Documents/Subjects/48434 Embedded Software/4 Labs/Lab 4/Template/Lab4/sources/I2C.h File Reference</title>
+<title>Lab1: C:/Users/11990405/Desktop/Lab4/sources/I2C.h File Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -86,169 +86,37 @@ Data Structures</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:af5a1731e099294a5bda6ef0f14aeb547"><td class="memItemLeft" align="right" valign="top"><a class="el" href="types_8h.html#a3e5b8192e7d9ffaf3542f1210aec18dd">BOOL</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_i2_c_8h.html#af5a1731e099294a5bda6ef0f14aeb547">I2C_Init</a> (const <a class="el" href="struct_t_i2_c_module.html">TI2CModule</a> *const aI2CModule, const uint32_t moduleClk)</td></tr>
-<tr class="memdesc:af5a1731e099294a5bda6ef0f14aeb547"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets up the I2C before first use.  <a href="#af5a1731e099294a5bda6ef0f14aeb547">More...</a><br /></td></tr>
-<tr class="separator:af5a1731e099294a5bda6ef0f14aeb547"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0d6844ce590bbf5cc557fdf0747ad551"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_i2_c_8h.html#a0d6844ce590bbf5cc557fdf0747ad551">I2C_SelectSlaveDevice</a> (const uint8_t slaveAddress)</td></tr>
-<tr class="memdesc:a0d6844ce590bbf5cc557fdf0747ad551"><td class="mdescLeft">&#160;</td><td class="mdescRight">Selects the current slave device.  <a href="#a0d6844ce590bbf5cc557fdf0747ad551">More...</a><br /></td></tr>
-<tr class="separator:a0d6844ce590bbf5cc557fdf0747ad551"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:acaac94d86a7213791fb691d57c6f278b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_i2_c_8h.html#acaac94d86a7213791fb691d57c6f278b">I2C_Write</a> (const uint8_t registerAddress, const uint8_t data)</td></tr>
-<tr class="memdesc:acaac94d86a7213791fb691d57c6f278b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write a byte of data to a specified register.  <a href="#acaac94d86a7213791fb691d57c6f278b">More...</a><br /></td></tr>
-<tr class="separator:acaac94d86a7213791fb691d57c6f278b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a03054e2b5a4678e9b31dad8ccee6a2cc"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_i2_c_8h.html#a03054e2b5a4678e9b31dad8ccee6a2cc">I2C_Read</a> (const uint8_t registerAddress, uint8_t *const data, const uint8_t nbBytes)</td></tr>
-<tr class="memdesc:a03054e2b5a4678e9b31dad8ccee6a2cc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reads data of a specified length starting from a specified register.  <a href="#a03054e2b5a4678e9b31dad8ccee6a2cc">More...</a><br /></td></tr>
-<tr class="separator:a03054e2b5a4678e9b31dad8ccee6a2cc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga4fc37bd20c1e62b168e314e8b447a853"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___i2_c__module.html#ga4fc37bd20c1e62b168e314e8b447a853">I2C_Init</a> (const <a class="el" href="struct_t_i2_c_module.html">TI2CModule</a> *const aI2CModule, const uint32_t moduleClk)</td></tr>
+<tr class="memdesc:ga4fc37bd20c1e62b168e314e8b447a853"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets up the I2C before first use.  <a href="group___i2_c__module.html#ga4fc37bd20c1e62b168e314e8b447a853">More...</a><br /></td></tr>
+<tr class="separator:ga4fc37bd20c1e62b168e314e8b447a853"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga0d6844ce590bbf5cc557fdf0747ad551"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___i2_c__module.html#ga0d6844ce590bbf5cc557fdf0747ad551">I2C_SelectSlaveDevice</a> (const uint8_t slaveAddress)</td></tr>
+<tr class="memdesc:ga0d6844ce590bbf5cc557fdf0747ad551"><td class="mdescLeft">&#160;</td><td class="mdescRight">Selects the current slave device.  <a href="group___i2_c__module.html#ga0d6844ce590bbf5cc557fdf0747ad551">More...</a><br /></td></tr>
+<tr class="separator:ga0d6844ce590bbf5cc557fdf0747ad551"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gacaac94d86a7213791fb691d57c6f278b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___i2_c__module.html#gacaac94d86a7213791fb691d57c6f278b">I2C_Write</a> (const uint8_t registerAddress, const uint8_t data)</td></tr>
+<tr class="memdesc:gacaac94d86a7213791fb691d57c6f278b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write a byte of data to a specified register.  <a href="group___i2_c__module.html#gacaac94d86a7213791fb691d57c6f278b">More...</a><br /></td></tr>
+<tr class="separator:gacaac94d86a7213791fb691d57c6f278b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga3692682bb1cb84e1a3d0c31195451bd9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___i2_c__module.html#ga3692682bb1cb84e1a3d0c31195451bd9">I2C_PollRead</a> (const uint8_t registerAddress, uint8_t *const data, const uint8_t nbBytes)</td></tr>
+<tr class="memdesc:ga3692682bb1cb84e1a3d0c31195451bd9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reads data of a specified length starting from a specified register.  <a href="group___i2_c__module.html#ga3692682bb1cb84e1a3d0c31195451bd9">More...</a><br /></td></tr>
+<tr class="separator:ga3692682bb1cb84e1a3d0c31195451bd9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga3685b2f03da2fa00b0cb671a0cce4f3f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___i2_c__module.html#ga3685b2f03da2fa00b0cb671a0cce4f3f">I2C_IntRead</a> (const uint8_t registerAddress, uint8_t *const data, const uint8_t nbBytes)</td></tr>
+<tr class="memdesc:ga3685b2f03da2fa00b0cb671a0cce4f3f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reads data of a specified length starting from a specified register.  <a href="group___i2_c__module.html#ga3685b2f03da2fa00b0cb671a0cce4f3f">More...</a><br /></td></tr>
+<tr class="separator:ga3685b2f03da2fa00b0cb671a0cce4f3f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga2ee0e3c2704fda01833f33eca6430dee"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___i2_c__module.html#ga2ee0e3c2704fda01833f33eca6430dee">__attribute__</a> ((interrupt)) I2C_ISR(void)</td></tr>
+<tr class="memdesc:ga2ee0e3c2704fda01833f33eca6430dee"><td class="mdescLeft">&#160;</td><td class="mdescRight">Interrupt service routine for the I2C.  <a href="group___i2_c__module.html#ga2ee0e3c2704fda01833f33eca6430dee">More...</a><br /></td></tr>
+<tr class="separator:ga2ee0e3c2704fda01833f33eca6430dee"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>I/O routines for the K70 I2C interface. </p>
 <p>This contains the functions for operating the I2C (inter-integrated circuit) module.</p>
 <dl class="section author"><dt>Author</dt><dd>PMcL </dd></dl>
 <dl class="section date"><dt>Date</dt><dd>2015-09-17 </dd></dl>
-</div><h2 class="groupheader">Function Documentation</h2>
-<a class="anchor" id="af5a1731e099294a5bda6ef0f14aeb547"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="types_8h.html#a3e5b8192e7d9ffaf3542f1210aec18dd">BOOL</a> I2C_Init </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="struct_t_i2_c_module.html">TI2CModule</a> *const&#160;</td>
-          <td class="paramname"><em>aI2CModule</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const uint32_t&#160;</td>
-          <td class="paramname"><em>moduleClk</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Sets up the I2C before first use. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">aI2CModule</td><td>is a structure containing the operating conditions for the module. </td></tr>
-    <tr><td class="paramname">moduleClk</td><td>The module clock in Hz. </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>BOOL - TRUE if the I2C module was successfully initialized. </dd></dl>
-
-</div>
-</div>
-<a class="anchor" id="a03054e2b5a4678e9b31dad8ccee6a2cc"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void I2C_Read </td>
-          <td>(</td>
-          <td class="paramtype">const uint8_t&#160;</td>
-          <td class="paramname"><em>registerAddress</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">uint8_t *const&#160;</td>
-          <td class="paramname"><em>data</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const uint8_t&#160;</td>
-          <td class="paramname"><em>nbBytes</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Reads data of a specified length starting from a specified register. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">registerAddress</td><td>The register address. </td></tr>
-    <tr><td class="paramname">data</td><td>A pointer to store the bytes that are read. </td></tr>
-    <tr><td class="paramname">nbBytes</td><td>The number of bytes to read. </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<a class="anchor" id="a0d6844ce590bbf5cc557fdf0747ad551"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void I2C_SelectSlaveDevice </td>
-          <td>(</td>
-          <td class="paramtype">const uint8_t&#160;</td>
-          <td class="paramname"><em>slaveAddress</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Selects the current slave device. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">slaveAddress</td><td>The slave device address. </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<a class="anchor" id="acaac94d86a7213791fb691d57c6f278b"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void I2C_Write </td>
-          <td>(</td>
-          <td class="paramtype">const uint8_t&#160;</td>
-          <td class="paramname"><em>registerAddress</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const uint8_t&#160;</td>
-          <td class="paramname"><em>data</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Write a byte of data to a specified register. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">registerAddress</td><td>The register address. </td></tr>
-    <tr><td class="paramname">data</td><td>The 8-bit data to write. </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-</div><!-- contents -->
+</div></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
     <li class="navelem"><a class="el" href="dir_08d237fc27d4ecd563f71c5d52f2fecc.html">sources</a></li><li class="navelem"><a class="el" href="_i2_c_8h.html">I2C.h</a></li>
-    <li class="footer">Generated on Wed Sep 23 2015 15:55:33 for Lab1 by
+    <li class="footer">Generated on Wed May 17 2017 02:48:32 for Lab1 by
     <a href="http://www.doxygen.org/index.html">
     <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.10 </li>
   </ul>

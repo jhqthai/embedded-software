@@ -15,6 +15,7 @@ C_SRCS += \
 ../Sources/UART.c \
 ../Sources/accel.c \
 ../Sources/main.c \
+../Sources/median.c \
 ../Sources/packet.c 
 
 OBJS += \
@@ -29,6 +30,7 @@ OBJS += \
 ./Sources/UART.o \
 ./Sources/accel.o \
 ./Sources/main.o \
+./Sources/median.o \
 ./Sources/packet.o 
 
 C_DEPS += \
@@ -43,6 +45,7 @@ C_DEPS += \
 ./Sources/UART.d \
 ./Sources/accel.d \
 ./Sources/main.d \
+./Sources/median.d \
 ./Sources/packet.d 
 
 

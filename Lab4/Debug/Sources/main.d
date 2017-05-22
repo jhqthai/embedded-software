@@ -12,7 +12,7 @@ Sources/main.o: ../Sources/main.c \
  C:/Users/11990405/Desktop/Lab4/Generated_Code/IO_Map.h ../Sources/FIFO.h \
  ../Sources/types.h ../Sources/UART.h ../Sources/packet.h \
  ../Sources/LEDs.h ../Sources/Flash.h ../Sources/PIT.h ../Sources/RTC.h \
- ../Sources/FTM.h
+ ../Sources/FTM.h ../Sources/accel.h ../Sources/I2C.h ../Sources/median.h
 
 C:/Users/11990405/Desktop/Lab4/Generated_Code/Cpu.h:
 
@@ -53,3 +53,9 @@ C:/Users/11990405/Desktop/Lab4/Generated_Code/IO_Map.h:
 ../Sources/RTC.h:
 
 ../Sources/FTM.h:
+
+../Sources/accel.h:
+
+../Sources/I2C.h:
+
+../Sources/median.h:

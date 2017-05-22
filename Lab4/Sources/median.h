@@ -7,9 +7,14 @@
  *  @author PMcL
  *  @date 2015-10-12
  */
+/*!
+**  @addtogroup Median_module I2C module documentation
+**  @{
+*/
 
 #ifndef MEDIAN_H
 #define MEDIAN_H
+/* MODULE Median */
 
 // New types
 #include "types.h"
@@ -23,3 +28,7 @@
 uint8_t Median_Filter3(const uint8_t n1, const uint8_t n2, const uint8_t n3);
 
 #endif
+
+/*!
+ * @}
+*/

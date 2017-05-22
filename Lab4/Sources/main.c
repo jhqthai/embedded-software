@@ -42,6 +42,9 @@
 #include "PIT.h"
 #include "RTC.h"
 #include "FTM.h"
+#include "accel.h"
+#include "I2C.h"
+#include "median.h"
 
 // Defining constants
 #define CMD_SGET_STARTUP 0x04
@@ -51,6 +54,11 @@
 #define CMD_FPROGRAM_BYTE 0x07
 #define CMD_FREAD_BYTE 0x08
 #define CMD_SET_TIME 0x0C
+#define CMD_ACCEL_VAL 0x10
+#define CMD_PROTO_MODE 0x0A
+
+// Special constant
+#define ACCEL_DATA_SIZE 3
 
 static const uint32_t BAUD_RATE  = 115200;
 
@@ -61,6 +69,7 @@ static uint16union_t volatile *NvTowerMd;
 
 // Declare function to be use in struct
 static void FTMCallback(void* arg);
+static void I2CPollCallback(void* arg);
 
 // Initialise FTM channel0
 static TFTMChannel FTMChannel0 =
@@ -73,6 +82,23 @@ static TFTMChannel FTMChannel0 =
 	NULL // FTM user argument
 };
 
+// Initialise FTM channel1 for I2C
+static TFTMChannel FTMChannel1 =
+{
+	1,
+	CPU_MCGFF_CLK_HZ_CONFIG_0, // Clock source
+	TIMER_FUNCTION_OUTPUT_COMPARE, // FTM Mode
+	TIMER_OUTPUT_DISCONNECT, // FTM edge/level select
+	&I2CPollCallback, // FTM user function
+	NULL // FTM user argument
+};
+
+// NEED COMMENT
+TAccelMode modeAccel;
+static bool pollI2C;
+
+// NEED COMMENT
+static TAccelData AccelData[ACCEL_DATA_SIZE];
 
 /*! Reads the command byte and processes relevant functionality
  *  Also handles ACKing and NAKing
@@ -194,6 +220,21 @@ bool PacketProcessor(void)
     		success = false;
     	break;
 
+    // Case Protocol mode
+    case CMD_PROTO_MODE:
+    	// Set protocol mode
+    	if ((Packet_Parameter1==1) && (Packet_Parameter3 == 0))
+    	{
+    		if(Packet_Parameter2) // Set to int/synch mode
+    			modeAccel = ACCEL_INT;
+    		else // Set to poll/asynch mode
+    			modeAccel = ACCEL_POLL;
+    		Accel_SetMode(modeAccel);
+    	}
+    	// Get protocol mode
+    	if ((Packet_Parameter1==2) && (Packet_Parameter2 == Packet_Parameter3 == 0))
+    		Packet_Put(CMD_PROTO_MODE, 0x01, modeAccel, 0x00);
+
     default:
       success = false;
   }
@@ -215,6 +256,8 @@ bool PacketProcessor(void)
     }
   }
 }
+
+
 
 /*! @brief PIT interrupt user callback function
  *  
@@ -260,6 +303,94 @@ void FTMCallback(void* arg)
 	LEDs_Off(LED_BLUE);
 }
 
+/*! @brief Signals I2C needs to be polled
+ *
+ *  @return void
+ */
+void I2CPollCallback(void* arg)
+{
+	// Set pollI2C to true, to signal it is time to poll
+	pollI2C = true;
+}
+
+// NEED COMMENT
+void SendMeanAccelPacket()
+{
+	uint8_t xMed = Median_Filter3(AccelData[0].axes.x, AccelData[1].axes.x, AccelData[2].axes.x);
+	uint8_t yMed = Median_Filter3(AccelData[0].axes.y, AccelData[1].axes.y, AccelData[2].axes.y);
+	uint8_t zMed = Median_Filter3(AccelData[0].axes.z, AccelData[1].axes.z, AccelData[2].axes.z);
+
+	Packet_Put(CMD_ACCEL_VAL, xMed, yMed, zMed);
+}
+
+
+/*! @brief Gets incoming xyz data via interrupt and adds it to the AccelData history
+ *
+ *	Used for calculating the median
+ *
+ * @return void
+ */
+void HandleAccelIntRead()
+{
+	// Gets the latest accel data
+	uint8_t newData[3];
+	Accel_ReadXYZ(&newData[3]);
+
+	// Stores in struct
+	TAccelData latestData;
+	latestData.axes.x = newData[0];
+	latestData.axes.y = newData[1];
+	latestData.axes.z = newData[2];
+
+	int history;
+	for(history = ACCEL_DATA_SIZE; history>0; history--) //shifts current data down - freeing up 0 index
+	{
+		AccelData[history] = AccelData[history-1];
+	}
+	AccelData[0] = latestData; // Places new data in 0 index
+	SendMeanAccelPacket();
+}
+
+/*! @brief Gets incoming xyz data via polling and adds it to the AccelData history
+ *
+ * @return void
+ */
+void HandleAccelPollRead()
+{
+	// Gets the latest accel data
+	uint8_t newData[3];
+	I2C_PollRead(0x1D, &newData[3], 3);
+
+	// Stores in struct
+	TAccelData latestData;
+	latestData.axes.x = newData[0];
+	latestData.axes.y = newData[1];
+	latestData.axes.z = newData[2];
+
+	int history;
+
+	// Shifts current data down - freeing up 0 index
+	for(history = ACCEL_DATA_SIZE; history>0; history--)
+	{
+		AccelData[history] = AccelData[history-1];
+	}
+	// Places new data in 0 index
+	AccelData[0] = latestData;
+	SendMeanAccelPacket();
+}
+
+// NEED COMMENT
+static TAccelSetup AccelSetup =
+{
+	CPU_BUS_CLK_HZ,
+	&HandleAccelIntRead,
+	(void *) 0,
+	&HandleAccelPollRead,
+	(void *) 0
+};
+
+
+
 /*lint -save  -e970 Disable MISRA rule (6.3) checking. */
 int main(void)
 /*lint -restore Enable MISRA rule (6.3) checking. */
@@ -299,6 +430,11 @@ int main(void)
   // Initialise FTM
   FTM_Init();
 
+  // Initialise Accel (inits I2C)
+  Accel_Init(&AccelSetup);
+  pollI2C = true;
+  modeAccel = ACCEL_POLL;
+
   // Allocate flash addresses for tower number and mode
   bool allocTowerNB = Flash_AllocateVar((void*)&NvTowerNb, sizeof(*NvTowerNb));
   bool allocTowerMd = Flash_AllocateVar((void*)&NvTowerMd, sizeof(*NvTowerMd));
@@ -328,7 +464,15 @@ int main(void)
     {
     	LEDs_On(LED_BLUE);
     	FTM_StartTimer(&FTMChannel0); // Start timer for output compare
-      PacketProcessor(); //Handle packet according to the command byte
+    	PacketProcessor(); //Handle packet according to the command byte
+    }
+
+    // Polling method for asynchronous mode
+    if ((modeAccel == ACCEL_POLL) && pollI2C)
+    {
+    	FTM_StartTimer(&FTMChannel1); // Start timer for accelerometer
+    	HandleAccelPollRead(); // Poll I2C
+    	pollI2C = false; // Wait for next poll
     }
   }
   /*** Don't write any code pass this line, or it will be deleted during code generation. ***/

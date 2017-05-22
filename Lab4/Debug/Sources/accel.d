@@ -6,7 +6,8 @@ Sources/accel.o: ../Sources/accel.c ../Sources/accel.h ../Sources/types.h \
  C:/Users/11990405/Desktop/Lab4/Generated_Code/PE_Error.h \
  C:/Users/11990405/Desktop/Lab4/Generated_Code/PE_Const.h \
  C:/Users/11990405/Desktop/Lab4/Generated_Code/IO_Map.h \
- C:/Users/11990405/Desktop/Lab4/Generated_Code/PE_types.h
+ C:/Users/11990405/Desktop/Lab4/Generated_Code/PE_types.h \
+ ../Sources/i2c.h
 
 ../Sources/accel.h:
 
@@ -29,3 +30,5 @@ C:/Users/11990405/Desktop/Lab4/Generated_Code/PE_Const.h:
 C:/Users/11990405/Desktop/Lab4/Generated_Code/IO_Map.h:
 
 C:/Users/11990405/Desktop/Lab4/Generated_Code/PE_types.h:
+
+../Sources/i2c.h:

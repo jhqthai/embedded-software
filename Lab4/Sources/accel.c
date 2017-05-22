@@ -30,9 +30,10 @@
 #include "CPU.h"
 #include "PE_types.h"
 
+#include "i2c.h"
+
 // Accelerometer registers
 #define ADDRESS_OUT_X_MSB 0x01
-
 #define ADDRESS_INT_SOURCE 0x0C
 
 static union
@@ -102,8 +103,11 @@ static union
 #define CTRL_REG1_DR	    	  CTRL_REG1_Union.bits.DR
 #define CTRL_REG1_ASLP_RATE	  CTRL_REG1_Union.bits.ASLP_RATE
 
+
+
 #define ADDRESS_CTRL_REG2 0x2B
 
+#define ADDRESS_CTL_REG2_RST_MASK 0x40
 #define ADDRESS_CTRL_REG3 0x2C
 
 static union
@@ -183,6 +187,136 @@ static union
 #define CTRL_REG5_INT_CFG_TRANS		CTRL_REG5_Union.bits.INT_CFG_TRANS
 #define CTRL_REG5_INT_CFG_FIFO		CTRL_REG5_Union.bits.INT_CFG_FIFO
 #define CTRL_REG5_INT_CFG_ASLP		CTRL_REG5_Union.bits.INT_CFG_ASLP
+
+// Global variables
+static uint8_t AccModuleClk;
+static void (*ADRCallback)(void*);	/*!< The user's data ready callback function. */
+static void *ADRArgs;		/*!< The user's data ready callback function arguments. */
+static void (*ARCCallback)(void*);	/*!< The user's read complete callback function. */
+static void *ARCArgs;		/*!< The user's read complete callback function arguments. */
+
+// Address of accelerometer with SA0 high
+const static uint8_t MMA_ADDR_SA0H =  0x1D;
+const static uint8_t WHO_AM_I_REG_ADDR = 0x0D;
+
+
+bool Accel_Init(const TAccelSetup* const accelSetup)
+{
+	// Set receive variable to private global variable
+  AccModuleClk = accelSetup->moduleClk;
+  ADRCallback =  accelSetup->dataReadyCallbackFunction;
+  ADRArgs =  accelSetup->dataReadyCallbackArguments;
+  ARCCallback = accelSetup->readCompleteCallbackFunction;
+  ARCArgs = accelSetup->readCompleteCallbackArguments;
+
+	// Enable PORTB module clock gate
+	SIM_SCGC5 |= SIM_SCGC5_PORTB_MASK;
+
+	// PORTB PCR4 configuration for GPIO, interrupt status flag, interrupt on falling edge
+	PORTB_PCR4 |= PORT_PCR_MUX(1) | PORT_PCR_ISF_MASK | PORT_PCR_IRQC(0x0A);
+
+	// Initialise PORTB NVIC; Vector = 104, IRQ = 88, Non-IPR = 2
+	// Clear pending interrupts
+	NVICICPR2 = (1 << 24);
+	// Set enable interrupts
+	NVICISER2 = (1 << 24);
+
+	// Pass on the slave address, module clock and relevant callbacks
+	TI2CModule I2CModule = {
+		MMA_ADDR_SA0H,
+		100000,
+		ARCCallback,
+		ARCArgs
+	};
+
+	// Initialise I2C
+	I2C_Init(&I2CModule, AccModuleClk);
+
+	// Select slave device
+	I2C_SelectSlaveDevice(MMA_ADDR_SA0H);
+
+	// Verify slave is who it's meant to be
+	uint8_t whoAmIResult;
+	I2C_PollRead(WHO_AM_I_REG_ADDR, &whoAmIResult, 1); //request 1 byte from the 'who am i' ID register
+	//if(whoAmIResult != 0x1A) //ID of accelerometer is 0x1A (MMA.pdf p.20)
+	//	return false; //if it does not match, something has gone wrong
+
+	// Control register 1 - Set relevant masks
+	// Init with a rate of 1.56 Hz
+	CTRL_REG1_DR = DATE_RATE_1_56_HZ;
+	//CTRL_REG1_LNOISE = 0;
+	CTRL_REG1_ASLP_RATE = SLEEP_MODE_RATE_1_56_HZ;
+	I2C_Write(ADDRESS_CTRL_REG1, CTRL_REG1);
+
+	// Control register 2 - Reset accelerator before use
+	I2C_Write(ADDRESS_CTRL_REG2, ADDRESS_CTL_REG2_RST_MASK);
+
+	// Control register 3 - Set relevant masks
+	// Set push-pull mode
+	CTRL_REG3_PP_OD = 0;
+	I2C_Write(ADDRESS_CTRL_REG3, CTRL_REG3);
+
+	// Control register 4 - Set relevant masks
+	// Disable data ready interrupts
+	CTRL_REG5_INT_CFG_DRDY = 0;
+	I2C_Write(ADDRESS_CTRL_REG4, CTRL_REG4);
+
+	// Control register 5
+	// Set data ready interrupt to use INT1 pin	(set fken everything enabled)
+	I2C_Write(ADDRESS_CTRL_REG5, CTRL_REG5);
+}
+
+
+void Accel_ReadXYZ(uint8_t data[3])
+{
+	// Read XYZ 8 most significant bits (MMA.pdf p.13)
+	// Address auto-increment afters each read
+	// Skips LSB values due to F_READ being set
+	I2C_IntRead(ADDRESS_OUT_X_MSB, data, 3);
+}
+
+
+void Accel_SetMode(const TAccelMode mode)
+{
+	// Interrupt mode = Accelerometer interrupts when data is ready
+	if (mode == ACCEL_INT)
+	{
+		// Enable data ready interrupt
+		CTRL_REG5_INT_CFG_DRDY = 1;
+		I2C_Write(ADDRESS_CTRL_REG4, CTRL_REG4);
+		I2C0_C1 &= ~I2C_C1_IICIE_MASK; // NEED COMMENT WHY?
+	}
+
+	// Poll mode = I2C Master initiates read of data from accelerometer slave
+	else
+	{
+		// Disable data ready interrupt
+		CTRL_REG5_INT_CFG_DRDY = 0;
+		I2C_Write(ADDRESS_CTRL_REG4, CTRL_REG4);
+		I2C0_C1 |= I2C_C1_IICIE_MASK; // NEED COMMENT WHY?
+	}
+}
+
+
+
+void __attribute__ ((interrupt)) AccelDataReady_ISR(void)
+{
+
+	// Check if configured interrupt is enabled
+	if (PORTB_PCR4 & PORT_PCR_IRQC_MASK)
+	{
+		// Check if flag is set
+		if (PORTB_PCR4 & PORT_PCR_ISF_MASK)
+		{
+			// Clear POIRTB interrupt
+			PORTB_PCR4 |= PORT_PCR_ISF_MASK;
+
+			// Sends the data through to main as an argument
+			(ADRCallback)(ADRArgs);
+		}
+	}
+}
+
 
 /*!
  * @}
