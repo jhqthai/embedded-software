@@ -11,5 +11,13 @@ Added Median.c
 Accel.c edited
 I2C.c edited to try ISR.
 
+31/05/17
+Fixed busy mask, and interrtup in I2C.c
+Changed polling in main.c
+Changed median call in main.c
+
 Todo:
-Fix problem in I2C.c busy mask.  
+Implement I2C interrupt and accel interrupt
+
+ 
+

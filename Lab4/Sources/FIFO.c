@@ -61,9 +61,6 @@ bool FIFO_Get(TFIFO * const FIFO, uint8_t volatile * const dataPtr)
   //If not, return true, increment start
   else
   {
-
-
-
   	// The value of start variable is incremented AFTER it is accessed
   	*dataPtr = FIFO->Buffer[FIFO->Start++];
     FIFO->NbBytes--;

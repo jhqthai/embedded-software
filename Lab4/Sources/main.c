@@ -262,70 +262,15 @@ bool PacketProcessor(void)
 }
 
 
-
-/*! @brief PIT interrupt user callback function
- *  
- *	Confirm interrupt occurred
- *	Toggle green LED
- *  @return void
- */
-void PITCallback(void* arg)
-{
-	// Toggles green LED 
-	LEDs_Toggle(LED_GREEN);
-}
-
-/*! @brief RTC interrupt user callback function
- *
- *  Send current time to PC
- *	Toggle yellow LED
- *  @return void
- */
-void RTCCallback(void* arg)
-{
-	// Variables to store current time
-	uint8_t hours, minutes, seconds;
-	
-	// Gets current time
-	RTC_Get(&hours, &minutes, &seconds);
-  
-	// Sets updated time
-	Packet_Put(CMD_SET_TIME, hours, minutes, seconds);
-	
-	// Toggles yellow LED
-	LEDs_Toggle(LED_YELLOW);							
-}
-
-/*! @brief FTM interrupt user callback function
- *
- *	Toggle blue LED
- *  @return void
- */
-void FTMCallback(void* arg)
-{
-	// Turn LED off after FTM interrupt
-	LEDs_Off(LED_BLUE);
-}
-
-/*! @brief Signals I2C needs to be polled
- *
- *  @return void
- */
-void I2CPollCallback(void* arg)
-{
-	// Set pollI2C to true, to signal it is time to poll
-	pollI2C = true;
-}
-
 /*! @brief Calculates median xyz values and sends it to pc
  *
  * @return void
  */
 void SendMeanAccelPacket()
 {
-	uint8_t xMed = Median_Filter3(AccelData[0].axes.x, AccelData[1].axes.x, AccelData[2].axes.x);
-	uint8_t yMed = Median_Filter3(AccelData[0].axes.y, AccelData[1].axes.y, AccelData[2].axes.y);
-	uint8_t zMed = Median_Filter3(AccelData[0].axes.z, AccelData[1].axes.z, AccelData[2].axes.z);
+	uint8_t xMed = Median_Filter3(AccelData[0].bytes[0], AccelData[1].bytes[0], AccelData[2].bytes[0]);
+	uint8_t yMed = Median_Filter3(AccelData[0].bytes[1], AccelData[1].bytes[1], AccelData[2].bytes[1]);
+	uint8_t zMed = Median_Filter3(AccelData[0].bytes[2], AccelData[1].bytes[2], AccelData[2].bytes[2]);
 
 	Packet_Put(CMD_ACCEL_VAL, xMed, yMed, zMed);
 }
@@ -337,24 +282,25 @@ void SendMeanAccelPacket()
  */
 void HandleAccelIntRead()
 {
-	// Gets the latest accel data
-	uint8_t newData[3];
-	Accel_ReadXYZ(&newData[3]);
+	static TAccelData newAccelData;
 
-	// Stores in struct
-	TAccelData latestData;
-	latestData.axes.x = newData[0];
-	latestData.axes.y = newData[1];
-	latestData.axes.z = newData[2];
+	Accel_ReadXYZ(newAccelData.bytes);
 
 	// Shifts current data down - freeing up 0 index
-	for(int history = ACCEL_DATA_SIZE; history>0; history--)
+	for(int history = 2; history>0; history--)
 	{
-		AccelData[history] = AccelData[history-1];
+			AccelData[history].bytes[0] = AccelData[history-1].bytes[0];
+			AccelData[history].bytes[1] = AccelData[history-1].bytes[1];
+			AccelData[history].bytes[2] = AccelData[history-1].bytes[2];
 	}
-	AccelData[0] = latestData; // Places new data in 0 index
+
+	AccelData[0].bytes[0] = newAccelData.bytes[0];
+	AccelData[0].bytes[1] = newAccelData.bytes[1];
+	AccelData[0].bytes[2] = newAccelData.bytes[2];
+
 	SendMeanAccelPacket();
 }
+
 
 /*! @brief Gets incoming xyz data via polling and adds it to the AccelData history
  *
@@ -362,28 +308,22 @@ void HandleAccelIntRead()
  */
 void HandleAccelPollRead()
 {
+	static TAccelData newAccelData;
+
+	Accel_ReadXYZ(newAccelData.bytes);
+
 	// Shifts current data down - freeing up 0 index
-	for(int history = ACCEL_DATA_SIZE; history>0; history--)
+	for(int history = 2; history>0; history--)
 	{
-		AccelData[history] = AccelData[history-1];
+			AccelData[history].bytes[0] = AccelData[history-1].bytes[0];
+			AccelData[history].bytes[1] = AccelData[history-1].bytes[1];
+			AccelData[history].bytes[2] = AccelData[history-1].bytes[2];
 	}
 
+	AccelData[0].bytes[0] = newAccelData.bytes[0];
+	AccelData[0].bytes[1] = newAccelData.bytes[1];
+	AccelData[0].bytes[2] = newAccelData.bytes[2];
 
-	// Gets the latest accel data
-	uint8_t newData[3] = {0x00, 0x00, 0x00};
-
-	I2C_IntRead(0x1D, &newData[0], 3);
-
-
-	// Stores in struct
-	TAccelData latestData;
-	latestData.axes.x = newData[0];
-	latestData.axes.y = newData[1];
-	latestData.axes.z = newData[2];
-
-
-	// Places new data in 0 index
-	AccelData[0] = latestData;
 	SendMeanAccelPacket();
 }
 
@@ -397,6 +337,69 @@ static TAccelSetup AccelSetup =
 	(void *) 0
 };
 
+
+/*! @brief PIT interrupt user callback function
+ *
+ *	Confirm interrupt occurred
+ *	Toggle green LED
+ *  @return void
+ */
+void PITCallback(void* arg)
+{
+	// Toggles green LED
+	LEDs_Toggle(LED_GREEN);
+}
+
+/*! @brief RTC interrupt user callback function
+ *
+ *  Send current time to PC
+ *	Toggle yellow LED
+ *  @return void
+ */
+void RTCCallback(void* arg)
+{
+	// Variables to store current time
+	uint8_t hours, minutes, seconds;
+
+	// Gets current time
+	RTC_Get(&hours, &minutes, &seconds);
+
+	// Sets updated time
+	Packet_Put(CMD_SET_TIME, hours, minutes, seconds);
+
+	// Toggles yellow LED
+	LEDs_Toggle(LED_YELLOW);
+
+  if ((modeAccel == ACCEL_POLL) && pollI2C)
+   	HandleAccelPollRead(); // Poll I2C
+}
+
+/*! @brief FTM interrupt user callback function
+ *
+ *	Toggle blue LED
+ *  @return void
+ */
+void FTMCallback(void* arg)
+{
+	// Turn LED off after FTM interrupt
+	LEDs_Off(LED_BLUE);
+}
+
+// TODO: Fix this place
+/*! @brief Signals I2C needs to be polled
+ *
+ *  @return void
+ */
+//void I2CPollCallback(void* arg)
+//{
+//	// Set pollI2C to true, to signal it is time to poll
+//	pollI2C = true;
+//}
+//
+//void ADRCallBack(void* arg)
+//{
+//
+//}
 
 /*lint -save  -e970 Disable MISRA rule (6.3) checking. */
 int main(void)
@@ -440,7 +443,7 @@ int main(void)
   // Initialise Accel (inits I2C)
   Accel_Init(&AccelSetup);
   pollI2C = true;
-  modeAccel = ACCEL_POLL;
+  //modeAccel = ACCEL_POLL;
 
   // Allocate flash addresses for tower number and mode
   bool allocTowerNB = Flash_AllocateVar((void*)&NvTowerNb, sizeof(*NvTowerNb));
@@ -475,13 +478,14 @@ int main(void)
     }
 
     // Polling method for asynchronous mode
-    if ((modeAccel == ACCEL_POLL) && pollI2C)
-    {
-    	FTM_StartTimer(&FTMChannel1); // Start timer for accelerometer
-    	HandleAccelPollRead(); // Poll I2C
-    	pollI2C = false; // Wait for next poll
-    }
+//    if ((modeAccel == ACCEL_POLL) && pollI2C)
+//    {
+//    	FTM_StartTimer(&FTMChannel1); // Start timer for accelerometer
+//    	HandleAccelPollRead(); // Poll I2C
+//    	pollI2C = false; // Wait for next poll
+//    }
   }
+
   /*** Don't write any code pass this line, or it will be deleted during code generation. ***/
   /*** RTOS startup code. Macro PEX_RTOS_START is defined by the RTOS component. DON'T MODIFY THIS CODE!!! ***/
   #ifdef PEX_RTOS_START
