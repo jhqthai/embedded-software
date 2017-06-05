@@ -63,10 +63,11 @@
 #define THREAD_STACK_SIZE 100
 static uint32_t InitThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08)));  /*!< The stack for the Init thread. */
 static uint32_t MainThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08))); /*!< The stack for the Main thread. */
-//static uint32_t RTCThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08))); /*!< The stack for the Main thread. */
+//static uint32_t RTCThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08))); /*!< The stack for the RTC thread. */
 static uint32_t TxUARTThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08))); /*!< The stack for the uart tx thread. */
 static uint32_t RxUARTThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08))); /*!< The stack for the uart rx thread. */
 static uint32_t PacketThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08))); /*!< The stack for the uart rx thread. */
+static uint32_t PITThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08))); /*!< The stack for the RTC thread. */
 
 static OS_ECB *InitSemaphore;    /*!< Binary semaphore for Init thread*/
 static OS_ECB *MainSemaphore;   /*!< Binary semaphore for Main thread */
@@ -260,10 +261,16 @@ void PacketProcessor(void)
  *	Toggle green LED
  *  @return void
  */
-void PITCallback(void* arg)
+static void PITThread(void* pData)
 {
-	// Toggles green LED
-	LEDs_Toggle(LED_GREEN);
+	for(;;)
+	{
+		OS_SemaphoreWait(PITSemaphore, 0);
+
+		// Toggles green LED
+		LEDs_Toggle(LED_GREEN);
+	}
+
 }
 
 /*! @brief RTC interrupt user callback function
@@ -346,7 +353,7 @@ static void InitThread(void* pData)
 			LEDs_On(LED_ORANGE);
 
 		// Initialise PIT
-		PIT_Init(CPU_BUS_CLK_HZ, &PITCallback, NULL);
+		PIT_Init(CPU_BUS_CLK_HZ);
 		PIT_Set(500e6,false);	// Sets PIT0 to interrupts every half second
 		PIT_Enable(true);			// Starts  PIT0
 
@@ -441,19 +448,22 @@ int main(void)
   // Initialise RTOS
   OS_Init(CPU_CORE_CLK_HZ, true);
 
+  // RTCSemaphore = OS_SemaphoreCreate(1); TODO: add this in later
   //MainSemaphore = OS_SemaphoreCreate(1);
   InitSemaphore = OS_SemaphoreCreate(1);
-	// RTCSemaphore = OS_SemaphoreCreate(1); TODO: add this in later
 
+
+
+
+  // TODO: error = OS_ThreadCreate(RTCThread, NULL, &RTCThreadStack[THREAD_STACK_SIZE-1],8);
   //error = OS_ThreadCreate(MainThread, NULL, &MainThreadStack[THREAD_STACK_SIZE-1],16);
   error = OS_ThreadCreate(InitThread, NULL, &InitThreadStack[THREAD_STACK_SIZE-1],0);
-  // TODO: error = OS_ThreadCreate(RTCThread, NULL, &RTCThreadStack[THREAD_STACK_SIZE-1],8);
 
   // TODO: Everything from this line onward is new
-  //error = OS_ThreadCreate(RxUARTThread, NULL, &RxUARTThreadStack[THREAD_STACK_SIZE-1],3);
+  error = OS_ThreadCreate(RxUARTThread, NULL, &RxUARTThreadStack[THREAD_STACK_SIZE-1],3);
   error = OS_ThreadCreate(TxUARTThread, NULL, &TxUARTThreadStack[THREAD_STACK_SIZE-1],4);
-  error = OS_ThreadCreate(PacketThread, NULL, &PacketThreadStack[THREAD_STACK_SIZE-1],10);
-
+  error = OS_ThreadCreate(PacketThread, NULL, &PacketThreadStack[THREAD_STACK_SIZE-1],5);
+  error = OS_ThreadCreate(PITThread, NULL, &PITThreadStack[THREAD_STACK_SIZE-1],2);
 
 
   OS_Start();

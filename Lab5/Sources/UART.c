@@ -117,7 +117,7 @@ void RxUARTThread(void* arg)
 		FIFO_Put(&RxFIFO, UART2_D);
 
 		// Signal packet semaphore indicate packet_init ready
-		OS_SemaphoreSignal(PacketSemaphore);
+		//OS_SemaphoreSignal(PacketSemaphore);
 
 		// Enable receiver interrupt mask
 		UART2_C2 |= UART_C2_RIE_MASK;

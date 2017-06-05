@@ -18,6 +18,9 @@
 
 // new types
 #include "types.h"
+#include "OS.h"
+
+static OS_ECB *PITSemaphore;   /*!< Binary semaphore for PIT thread */
 
 /*! @brief Sets up the PIT before first use.
  *
@@ -28,7 +31,7 @@
  *  @return bool - TRUE if the PIT was successfully initialized.
  *  @note Assumes that moduleClk has a period which can be expressed as an integral number of nanoseconds.
  */
-bool PIT_Init(const uint32_t moduleClk, void (*userFunction)(void*), void* userArguments);
+bool PIT_Init(const uint32_t moduleClk);
 
 /*! @brief Sets the value of the desired period of the PIT.
  *

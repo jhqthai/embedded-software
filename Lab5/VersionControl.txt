@@ -6,3 +6,13 @@ Accel.c edited.
 
 29/05/17
 Started implementation of RTOS in main.c, RTC.c, UART.c
+
+04/06/17
+UART transmit fixed
+Implemeting PIT
+
+
+todo:
+UART receive fix
+Implement RTOS in FIFO
+Fix PIT

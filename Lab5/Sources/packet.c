@@ -16,8 +16,6 @@
 #include "UART.h"
 #include "packet.h"
 
-
-
 TPacket Packet;
 const uint8_t PACKET_ACK_MASK = 0x80;
 static uint8_t PacketIndex = 0;
@@ -30,7 +28,7 @@ static uint8_t PacketIndex = 0;
  */
 bool Packet_Init(const uint32_t baudRate, const uint32_t moduleClk)
 {
-	// PacketSemaphore = OS_SemaphoreCreate(0);
+	PacketSemaphore = OS_SemaphoreCreate(0);
 	PacketPutSemaphore = OS_SemaphoreCreate(1);
   return UART_Init(baudRate, moduleClk);
 }
@@ -43,47 +41,50 @@ bool Packet_Get(void)
 {
   //Temp variable to store UART input
   uint8_t uartStore;
-  //If UART receives a character, store in uartStore
-  while (UART_InChar (&uartStore))
-  {
-  	//Places uartStore in the variable that corresponds to PacketIndex - also increments PacketIndex
-    switch (PacketIndex++)
-    {
-      case 0:
-        Packet_Command = uartStore;
-        break;
-      case 1:
-        Packet_Parameter1 = uartStore;
-        break;
-      case 2:
-        Packet_Parameter2 = uartStore;
-        break;
-      case 3:
-        Packet_Parameter3 = uartStore;
-        break;
-      case 4:
-        Packet_Checksum = uartStore;
 
-        //Compares incoming byte with expected checksum
-        if((Packet_Command ^ Packet_Parameter1 ^ Packet_Parameter2 ^ Packet_Parameter3) == Packet_Checksum)
-        {
-        	//Valid packet, reset PacketIndex and return true
-          PacketIndex = 0;
-          return true;
-        }
-        else
-        {
-        //Invalid packet, discard the 1st byte, and shift everything down 1 byte
-        Packet_Command = Packet_Parameter1;
-        Packet_Parameter1 = Packet_Parameter2;
-        Packet_Parameter2 = Packet_Parameter3;
-        Packet_Parameter3 = Packet_Checksum;
-        PacketIndex = 4;
-        return false;
-        }
-        break;
-    }
-  }
+  //If UART receives a character, store in uartStore
+  UART_InChar (&uartStore);
+
+//  while (UART_InChar (&uartStore))
+//  {
+		//Places uartStore in the variable that corresponds to PacketIndex - also increments PacketIndex
+		switch (PacketIndex++)
+		{
+			case 0:
+				Packet_Command = uartStore;
+				break;
+			case 1:
+				Packet_Parameter1 = uartStore;
+				break;
+			case 2:
+				Packet_Parameter2 = uartStore;
+				break;
+			case 3:
+				Packet_Parameter3 = uartStore;
+				break;
+			case 4:
+				Packet_Checksum = uartStore;
+
+				//Compares incoming byte with expected checksum
+				if((Packet_Command ^ Packet_Parameter1 ^ Packet_Parameter2 ^ Packet_Parameter3) == Packet_Checksum)
+				{
+					//Valid packet, reset PacketIndex and return true
+					PacketIndex = 0;
+					return true;
+				}
+				else
+				{
+				//Invalid packet, discard the 1st byte, and shift everything down 1 byte
+				Packet_Command = Packet_Parameter1;
+				Packet_Parameter1 = Packet_Parameter2;
+				Packet_Parameter2 = Packet_Parameter3;
+				Packet_Parameter3 = Packet_Checksum;
+				PacketIndex = 4;
+				return false;
+				}
+				break;
+		}
+//  }
   return false;
 }
 
