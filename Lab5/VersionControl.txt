@@ -1,0 +1,8 @@
+15/05/17
+I2C.c completed, not tested.
+
+17/05/17
+Accel.c edited.
+
+29/05/17
+Started implementation of RTOS in main.c, RTC.c, UART.c
