@@ -16,21 +16,16 @@
 
 // Accelerometer functions
 #include "accel.h"
-
 // Inter-Integrated Circuit
 #include "I2C.h"
-
 // Median filter
 #include "median.h"
-
 // K70 module registers
 #include "MK70F12.h"
-
 // CPU and PE_types are needed for critical section variables and the defintion of NULL pointer
 #include "CPU.h"
 #include "PE_types.h"
 
-#include "i2c.h"
 
 // Accelerometer registers
 #define ADDRESS_OUT_X_MSB 0x01
@@ -189,7 +184,9 @@ static union
 #define CTRL_REG5_INT_CFG_ASLP		CTRL_REG5_Union.bits.INT_CFG_ASLP
 
 // Global variables
-static uint8_t AccModuleClk;
+static TAccelMode ProtocolMode;
+
+//static uint64_t AccModuleClk;
 static void (*ADRCallback)(void*);	/*!< The user's data ready callback function. */
 static void *ADRArgs;		/*!< The user's data ready callback function arguments. */
 static void (*ARCCallback)(void*);	/*!< The user's read complete callback function. */
@@ -200,10 +197,11 @@ const static uint8_t MMA_ADDR_SA0H =  0x1D;
 const static uint8_t WHO_AM_I_REG_ADDR = 0x0D;
 
 
+
 bool Accel_Init(const TAccelSetup* const accelSetup)
 {
 	// Set receive variable to private global variable
-  AccModuleClk = accelSetup->moduleClk;
+  //AccModuleClk = accelSetup->moduleClk;
   ADRCallback =  accelSetup->dataReadyCallbackFunction;
   ADRArgs =  accelSetup->dataReadyCallbackArguments;
   ARCCallback = accelSetup->readCompleteCallbackFunction;
@@ -218,7 +216,7 @@ bool Accel_Init(const TAccelSetup* const accelSetup)
 	};
 
 	// Initialise I2C
-	I2C_Init(&I2CModule, AccModuleClk);
+	I2C_Init(&I2CModule, accelSetup->moduleClk);
 
 	// Enable PORTB module clock gate
 	SIM_SCGC5 |= SIM_SCGC5_PORTB_MASK;
@@ -238,6 +236,7 @@ bool Accel_Init(const TAccelSetup* const accelSetup)
 	// Init with a rate of 1.56 Hz
 	CTRL_REG1_ACTIVE = 0;
 	CTRL_REG1_DR = DATE_RATE_1_56_HZ;
+	CTRL_REG1_F_READ = 1;
 	CTRL_REG1_LNOISE = 0;
 	CTRL_REG1_ASLP_RATE = SLEEP_MODE_RATE_1_56_HZ;
 	I2C_Write(ADDRESS_CTRL_REG1, CTRL_REG1);
@@ -256,7 +255,7 @@ bool Accel_Init(const TAccelSetup* const accelSetup)
 	I2C_Write(ADDRESS_CTRL_REG4, CTRL_REG4);
 
 	// Control register 5
-	// Set data ready interrupt to use INT1 pin	(set fken everything enabled)
+	// Set data ready interrupt to use INT1 pin	(set everything enabled)
 	I2C_Write(ADDRESS_CTRL_REG5, CTRL_REG5);
 
 	// Control register 1
@@ -271,23 +270,28 @@ void Accel_ReadXYZ(uint8_t data[3])
 	// Read XYZ 8 most significant bits (MMA.pdf p.13)
 	// Address auto-increment afters each read
 	// Skips LSB values due to F_READ being set
-	I2C_IntRead(ADDRESS_OUT_X_MSB, data, 3);
+	if (ProtocolMode == ACCEL_INT)
+		I2C_IntRead(ADDRESS_OUT_X_MSB, data, 3);
+	else if (ProtocolMode == ACCEL_POLL)
+		I2C_PollRead(ADDRESS_OUT_X_MSB, data, 3);
+
 }
 
 
 void Accel_SetMode(const TAccelMode mode)
 {
+	ProtocolMode = mode; // NEW
+
 	// Disable active mode before setting values
 	CTRL_REG1_ACTIVE = 0;
 	I2C_Write(ADDRESS_CTRL_REG1, CTRL_REG1);
 
 	// Interrupt mode = Accelerometer interrupts when data is ready
-	if (mode == ACCEL_INT)
+	if (ProtocolMode == ACCEL_INT)
 	{
 		// Enable data ready interrupt
 		CTRL_REG4_INT_EN_DRDY = 1;
 		I2C_Write(ADDRESS_CTRL_REG4, CTRL_REG4);
-		I2C0_C1 &= ~I2C_C1_IICIE_MASK; // Enable interrupt service
 	}
 
 	// Poll mode = I2C Master initiates read of data from accelerometer slave
@@ -296,7 +300,6 @@ void Accel_SetMode(const TAccelMode mode)
 		// Disable data ready interrupt
 		CTRL_REG4_INT_EN_DRDY = 0;
 		I2C_Write(ADDRESS_CTRL_REG4, CTRL_REG4);
-		I2C0_C1 |= I2C_C1_IICIE_MASK; // Disable interrupt service
 	}
 	// Activate active mode after setting values
 	CTRL_REG1_ACTIVE = 1;
@@ -306,22 +309,13 @@ void Accel_SetMode(const TAccelMode mode)
 
 void __attribute__ ((interrupt)) AccelDataReady_ISR(void)
 {
-  //Local Data declaration
-  uint8_t data[1];
-
-  PORTB_ISFR |= PORT_ISFR_ISF(4);
-
-  //Run I2C read function with the applicable data and generates a size of the variable, data
-  I2C_IntRead(ADDRESS_INT_SOURCE, data, sizeof(data));
-  //By reading the out INT_SOURCE Register it can be confirmed what interrupt type is incoming
-  INT_SOURCE = data[0];
-
-
-  //Condition statement for the Data Ready Interrupt Status - indication that new data is present
-  if (INT_SOURCE_SRC_DRDY == 1)
+	// Check if interrupt is pending
+  if (PORTB_PCR7 & PORT_PCR_ISF_MASK)
   {
-    //If true, a data Ready interrupt has occurred and the dataReadyCallbackFunction is to be invoked
-  		ADRCallback(ADRArgs);
+  	// Clear interrupt flag
+    PORTB_PCR7 |= PORT_PCR_ISF_MASK;
+    // Invoke AccelDataReady Callback
+    ADRCallback(ADRArgs);
   }
 }
 
