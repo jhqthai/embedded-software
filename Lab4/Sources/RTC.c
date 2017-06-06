@@ -47,6 +47,7 @@ bool RTC_Init(void (*userFunction)(void*), void* userArguments)
 	// Enable time seconds interrupt
 	RTC_IER |= RTC_IER_TSIE_MASK;
 
+
 	// Disable unused interrupt
 	RTC_IER &= ~(RTC_IER_TAIE_MASK | RTC_IER_TOIE_MASK | RTC_IER_TIIE_MASK);
 

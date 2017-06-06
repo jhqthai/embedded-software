@@ -264,8 +264,8 @@ void I2C_IntRead(const uint8_t registerAddress, uint8_t* const data, const uint8
 	ReadDestination = data;
 	TxNumBytes = nbBytes;
 
-	// Enable interrupt
-	I2C0_C1 |= I2C_C1_IICIE_MASK;
+//	// Enable interrupt
+//	I2C0_C1 |= I2C_C1_IICIE_MASK;
 
 	// Wait for bus idle and clear interrupt flag
 	I2CBusWait();

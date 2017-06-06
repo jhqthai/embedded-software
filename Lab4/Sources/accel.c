@@ -297,7 +297,6 @@ void Accel_SetMode(const TAccelMode mode)
 		// Enable data ready interrupt
 		CTRL_REG4_INT_EN_DRDY = 1;
 		I2C_Write(ADDRESS_CTRL_REG4, CTRL_REG4);
-		//I2C0_C1 &= ~I2C_C1_IICIE_MASK; // Enable interrupt service
 	}
 
 	// Poll mode = I2C Master initiates read of data from accelerometer slave
@@ -306,7 +305,6 @@ void Accel_SetMode(const TAccelMode mode)
 		// Disable data ready interrupt
 		CTRL_REG4_INT_EN_DRDY = 0;
 		I2C_Write(ADDRESS_CTRL_REG4, CTRL_REG4);
-		//I2C0_C1 |= I2C_C1_IICIE_MASK; // Disable interrupt service
 	}
 	// Activate active mode after setting values
 	CTRL_REG1_ACTIVE = 1;
@@ -321,7 +319,7 @@ void __attribute__ ((interrupt)) AccelDataReady_ISR(void)
   {
   	// Clear interrupt flag
     PORTB_PCR7 |= PORT_PCR_ISF_MASK;
-    // Invoke ADRCallback
+    // Invoke AccelDataReady Callback
     ADRCallback(ADRArgs);
   }
 }
