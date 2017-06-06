@@ -9,3 +9,11 @@ Started implementation of RTOS in main.c, RTC.c, UART.c
 
 05/06/17
 RTOS in completed for RTC, FTM, PIT
+UART RTOS completed 
+PIT RTOS completed
+RTC RTOS completed
+Added new Accel.c and I2C.c
+Accel poll completed
+
+TODO:
+ACCEL & I2C INTERRUPT
