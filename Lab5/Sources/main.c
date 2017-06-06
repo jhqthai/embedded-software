@@ -67,7 +67,7 @@ static uint32_t MainThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08)
 static uint32_t RTCThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08))); /*!< The stack for the Main thread. */
 static uint32_t PITThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08))); /*!< The stack for the PIT thread. */
 static uint32_t FTMThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08))); /*!< The stack for the FTM thread. */
-static uint32_t PacketThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08))); /*!< The stack for the uart rx thread. */
+static uint32_t PacketThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08))); /*!< The stack for the packet thread. */
 
 static OS_ECB *InitSemaphore;    /*!< Binary semaphore for Init thread*/
 static OS_ECB *MainSemaphore;   /*!< Binary semaphore for Main thread */
@@ -82,9 +82,25 @@ static volatile uint8_t *Write8;
 static uint16union_t volatile *NvTowerNb;
 static uint16union_t volatile *NvTowerMd;
 
+// Initialise accel mode variable
+static TAccelMode ModeAccel;
+// Initialise accel poll flag
+static bool PollI2C;
+//Initialise accel interrupt data ready flag
+static bool DataReady;
+// Initialise variable to store accel history
+static TAccelData AccelData[ACCEL_DATA_SIZE];
+// Initialise new accel data
+static TAccelData newAccelData;
+
+
 // Declare function to be use in struct
 static void FTMCallback(void* arg);
-static void I2CPollCallback(void* arg);
+static void FTMCallback(void* arg);
+static void AccelCallback(void* arg);
+static void I2CCallback(void* arg);
+static void I2CPoll();
+static void HandleAccelPollRead();
 
 // Initialise FTM channel0
 static TFTMChannel FTMChannel0 =
@@ -101,23 +117,22 @@ static TFTMChannel FTMChannel0 =
 static TFTMChannel FTMChannel1 =
 {
 	1,
-	CPU_MCGFF_CLK_HZ_CONFIG_0, // Clock source
+	CPU_MCGFF_CLK_HZ_CONFIG_0, // 1Hz frequency
 	TIMER_FUNCTION_OUTPUT_COMPARE, // FTM Mode
 	TIMER_OUTPUT_DISCONNECT, // FTM edge/level select
-	NULL, // FTM user function
+	&I2CPoll, // I2C poll signal
 	NULL // FTM user argument
 };
 
-
-
-// Initialise accel mode variable
-static TAccelMode modeAccel;
-
-// Initialise accel Poll flag
-static bool pollI2C;
-
-// Initialise variable to store accel history
-static TAccelData AccelData[ACCEL_DATA_SIZE];
+// Initialise Accelerometer setup
+static TAccelSetup AccelSetup =
+{
+	CPU_BUS_CLK_HZ,
+	*AccelCallback,
+	(void *) 0,
+	*I2CCallback,
+	(void *) 0
+};
 
 /*! Reads the command byte and processes relevant functionality
  *  Also handles ACKing and NAKing
@@ -139,7 +154,7 @@ bool PacketProcessor(void)
         success &= Packet_Put(CMD_SGET_VERSION, 0x76, 0x05, 0x00);
         success &= Packet_Put(CMD_TOWER_NUMBER, 0x01, NvTowerNb->s.Lo, NvTowerNb->s.Hi);
         success &= Packet_Put(CMD_TOWER_MODE, 0x01, NvTowerMd->s.Lo, NvTowerMd->s.Hi);
-        success &= Packet_Put(CMD_PROTO_MODE, 0x01, modeAccel, 0x00);
+        success &= Packet_Put(CMD_PROTO_MODE, 0x01, ModeAccel, 0x00);
       }
       else
         success = false;
@@ -237,22 +252,24 @@ bool PacketProcessor(void)
     		success = false;
     	break;
 
-    // Case Protocol mode
-    case CMD_PROTO_MODE:
-    	// Set protocol mode
-    	if ((Packet_Parameter1==2) && (Packet_Parameter3 == 0))
-    	{
-    		if(Packet_Parameter2) // Set to int/synch mode
-    			modeAccel = ACCEL_INT;
-    		else // Set to poll/asynch mode
-    			modeAccel = ACCEL_POLL;
-    		Accel_SetMode(modeAccel);
-    		success = true;
-    	}
-    	// Get protocol mode
-    	if ((Packet_Parameter1==1) && (Packet_Parameter2 == 0) && (Packet_Parameter3 == 0))
-    		success = Packet_Put(CMD_PROTO_MODE, 0x01, modeAccel, 0x00);
-    	break;
+		// Case Protocol mode
+		case CMD_PROTO_MODE:
+			// Get protocol mode
+			if ((Packet_Parameter1==1) && (Packet_Parameter2 == 0) && (Packet_Parameter3 == 0))
+				success = Packet_Put(CMD_PROTO_MODE, 0x01, ModeAccel, 0x00);
+			// Set protocol mode
+			else if ((Packet_Parameter1==2) && (Packet_Parameter3 == 0))
+			{
+				if(Packet_Parameter2) // Set to int/synch mode
+					ModeAccel = ACCEL_INT;
+				else // Set to poll/asynch mode
+					ModeAccel = ACCEL_POLL;
+				Accel_SetMode(ModeAccel);
+				success = true;
+			}
+			else
+				success = false;
+			break;
 
     default:
       success = false;
@@ -301,7 +318,7 @@ static void PITThread(void* arg)
  *	Toggle yellow LED
  *  @return void
  */
-static void RTCThread(void* arg)
+static void RTCThread(void* pData)
 {
 	for(;;)
 	{
@@ -316,6 +333,13 @@ static void RTCThread(void* arg)
 		Packet_Put(CMD_SET_TIME, hours, minutes, seconds);
 		// Toggles yellow LED
 		LEDs_Toggle(LED_YELLOW);
+
+		// Accel poll read
+		if ((ModeAccel == ACCEL_POLL))
+		{
+			HandleAccelPollRead(); // Poll I2C
+			LEDs_Toggle(LED_GREEN);
+		}
 	}
 }
 
@@ -333,16 +357,6 @@ static void FTMThread(void* arg)
 		// Turn LED off after FTM interrupt
 		LEDs_Off(LED_BLUE);
 	}
-}
-
-/*! @brief Signals I2C needs to be polled
- *
- *  @return void
- */
-void I2CPollCallback(void* arg)
-{
-	// Set pollI2C to true, to signal it is time to poll
-	pollI2C = true;
 }
 
 /*! @brief Packet interrupt user thread
@@ -367,84 +381,105 @@ static void PacketThread(void* pData)
   }
 }
 
-
 /*! @brief Calculates median xyz values and sends it to pc
  *
  * @return void
  */
 void SendMeanAccelPacket()
 {
-	uint8_t xMed = Median_Filter3(AccelData[0].axes.x, AccelData[1].axes.x, AccelData[2].axes.x);
-	uint8_t yMed = Median_Filter3(AccelData[0].axes.y, AccelData[1].axes.y, AccelData[2].axes.y);
-	uint8_t zMed = Median_Filter3(AccelData[0].axes.z, AccelData[1].axes.z, AccelData[2].axes.z);
+	uint8_t xMed = Median_Filter3(AccelData[0].bytes[0], AccelData[1].bytes[0], AccelData[2].bytes[0]);
+	uint8_t yMed = Median_Filter3(AccelData[0].bytes[1], AccelData[1].bytes[1], AccelData[2].bytes[1]);
+	uint8_t zMed = Median_Filter3(AccelData[0].bytes[2], AccelData[1].bytes[2], AccelData[2].bytes[2]);
 
 	Packet_Put(CMD_ACCEL_VAL, xMed, yMed, zMed);
 }
 
-
-/*! @brief Gets incoming xyz data via interrupt and adds it to the AccelData history
+/*! @brief Signals I2C needs to be polled
  *
- * @return void
+ *  @return void
  */
-void HandleAccelIntRead()
+void I2CPoll()
 {
-	// Gets the latest accel data
-	uint8_t newData[3];
-	Accel_ReadXYZ(&newData[3]);
+	// Set PollI2C to true, to receive next data
+	PollI2C = true;
 
-	// Stores in struct
-	TAccelData latestData;
-	latestData.axes.x = newData[0];
-	latestData.axes.y = newData[1];
-	latestData.axes.z = newData[2];
-
-	// Shifts current data down - freeing up 0 index
-	for(int history = ACCEL_DATA_SIZE; history>0; history--)
-	{
-		AccelData[history] = AccelData[history-1];
-	}
-	AccelData[0] = latestData; // Places new data in 0 index
-	SendMeanAccelPacket();
+	LEDs_Toggle(LED_GREEN);
 }
 
 /*! @brief Gets incoming xyz data via polling and adds it to the AccelData history
  *
  * @return void
  */
-void HandleAccelPollRead()
+static void HandleAccelPollRead()
 {
+	Accel_ReadXYZ(newAccelData.bytes);
+
 	// Shifts current data down - freeing up 0 index
-	for(int history = ACCEL_DATA_SIZE; history>0; history--)
+	for(int history = 2; history>0; history--)
 	{
-		AccelData[history] = AccelData[history-1];
+			AccelData[history].bytes[0] = AccelData[history-1].bytes[0];
+			AccelData[history].bytes[1] = AccelData[history-1].bytes[1];
+			AccelData[history].bytes[2] = AccelData[history-1].bytes[2];
 	}
 
-	// Gets the latest accel data
-	uint8_t newData[3] = {0x00, 0x00, 0x00};
+	AccelData[0].bytes[0] = newAccelData.bytes[0];
+	AccelData[0].bytes[1] = newAccelData.bytes[1];
+	AccelData[0].bytes[2] = newAccelData.bytes[2];
 
-	I2C_IntRead(0x1D, &newData[0], 3);
-
-	// Stores in struct
-	TAccelData latestData;
-	latestData.axes.x = newData[0];
-	latestData.axes.y = newData[1];
-	latestData.axes.z = newData[2];
-
-
-	// Places new data in 0 index
-	AccelData[0] = latestData;
 	SendMeanAccelPacket();
 }
 
-// Initialise Accelerometer setup
-static TAccelSetup AccelSetup =
+/*! @brief Signals I2C needs to be callback
+ *
+ *  @return void
+ */
+void I2CCallback(void* arg)
 {
-	CPU_BUS_CLK_HZ,
-	&HandleAccelIntRead,
-	(void *) 0,
-	&HandleAccelPollRead,
-	(void *) 0
-};
+	SendMeanAccelPacket();
+
+	// TODO: maybe in accelcallback after accel read.
+	LEDs_Toggle(LED_GREEN);
+
+	// Set data ready to true, to receive next data
+	DataReady = true;
+}
+
+/*! @brief Signal Accel callback
+ *
+ * @return void
+ */
+void AccelCallback(void* arg)
+{
+	if (DataReady)
+	{
+		DataReady = false; // Set to false to prevent new data from initialising
+
+		Accel_ReadXYZ(newAccelData.bytes);
+
+		// Shifts current data down - freeing up 0 index
+		for(int history = 2; history>0; history--)
+		{
+				AccelData[history].bytes[0] = AccelData[history-1].bytes[0];
+				AccelData[history].bytes[1] = AccelData[history-1].bytes[1];
+				AccelData[history].bytes[2] = AccelData[history-1].bytes[2];
+		}
+
+		AccelData[0].bytes[0] = newAccelData.bytes[0];
+		AccelData[0].bytes[1] = newAccelData.bytes[1];
+		AccelData[0].bytes[2] = newAccelData.bytes[2];
+	}
+
+	// Call I2C interrupt read
+	I2C_IntRead(0x01, AccelData[0].bytes, 3);
+
+//	Accel_ReadXYZ(newAccelData.bytes);
+//
+//	AccelData[0].bytes[0] = newAccelData.bytes[0];
+//	AccelData[0].bytes[1] = newAccelData.bytes[1];
+//	AccelData[0].bytes[2] = newAccelData.bytes[2];
+//
+//	SendMeanAccelPacket();
+}
 
 /*! @brief Initialisation thread
  *
@@ -489,10 +524,11 @@ static void InitThread(void* pData)
 		// Initialise FTM
 		FTM_Init();
 
-		// Initialise Accel (inits I2C)
-		//Accel_Init(&AccelSetup);
-		//pollI2C = true;
-		//modeAccel = ACCEL_POLL;
+	  // Initialise Accel (inits I2C)
+	  Accel_Init(&AccelSetup);
+	  PollI2C = true;
+	  DataReady = true;
+	  ModeAccel = ACCEL_POLL;
 
 		// Allocate flash addresses for tower number and mode
 		bool allocTowerNB = Flash_AllocateVar((void*)&NvTowerNb, sizeof(*NvTowerNb));
@@ -529,11 +565,14 @@ static void MainThread(void* pData)
   for (;;)
   {
   	(void)OS_SemaphoreWait(MainSemaphore, 0);
-//  	ACCEL STUFF
-
+			// Polling method for asynchronous mode
+//			if ((ModeAccel == ACCEL_POLL) && PollI2C)
+//			{
+//				FTM_StartTimer(&FTMChannel1); // Start timer for accelerometer
+//				HandleAccelPollRead(); // Poll I2C
+//				PollI2C = false; // Wait for next poll
+//			}
     (void)OS_SemaphoreSignal(MainSemaphore);
-
-
   }
 }
 
@@ -558,7 +597,7 @@ int main(void)
   OS_Init(CPU_CORE_CLK_HZ, true);
 
   // Create semaphores
-  MainSemaphore = OS_SemaphoreCreate(1);
+  MainSemaphore = OS_SemaphoreCreate(0);
   InitSemaphore = OS_SemaphoreCreate(0);
 	RTCSemaphore = OS_SemaphoreCreate(1);
 	PITSemaphore = OS_SemaphoreCreate(1);
