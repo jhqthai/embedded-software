@@ -14,16 +14,10 @@
 
 #include "RTC.h"
 #include "MK70F12.h"
-#include "OS.h"
-
-// Global Variables
 
 
 bool RTC_Init()
 {
-	// Set variable to private global variable
-
-
 	// Enable  RTC SCGC
 	SIM_SCGC6 |= SIM_SCGC6_RTC_MASK;
 
@@ -47,8 +41,6 @@ bool RTC_Init()
 
 	// Disable unused interrupt
 	RTC_IER &= ~(RTC_IER_TAIE_MASK | RTC_IER_TOIE_MASK | RTC_IER_TIIE_MASK);
-
-
 
 
   // Initialize NVIC
@@ -110,7 +102,7 @@ void __attribute__ ((interrupt)) RTC_ISR(void)
 {
 	OS_ISREnter();
 
-	// Runs callback method if interrupt requested
+	// Signal RTC semaphore
 	(void)OS_SemaphoreSignal(RTCSemaphore);
 
 	OS_ISRExit();

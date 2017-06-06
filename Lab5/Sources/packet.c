@@ -31,8 +31,8 @@ const uint8_t PACKET_ACK_MASK = 0x80;
  */
 bool Packet_Init(const uint32_t baudRate, const uint32_t moduleClk)
 {
-	PacketSemaphore = OS_SemaphoreCreate(0);
-	//PacketPutSemaphore = OS_SemaphoreCreate(1);
+	// Create semaphores
+	PacketPutSemaphore = OS_SemaphoreCreate(1);
   return UART_Init(baudRate, moduleClk);
 }
 
@@ -92,7 +92,7 @@ bool Packet_Get(void)
 bool Packet_Put (const uint8_t command, const uint8_t parameter1, const uint8_t parameter2, const uint8_t parameter3)
 {
 	// Obtain exclusive access to packet put
-	//OS_SemaphoreWait(PacketPutSemaphore, 0);
+	OS_SemaphoreWait(PacketPutSemaphore, 0);
 
   //Calculates checksum from command and parameters and sends all to FIFO
 	bool success = (UART_OutChar(command)
@@ -100,6 +100,9 @@ bool Packet_Put (const uint8_t command, const uint8_t parameter1, const uint8_t 
 	    && UART_OutChar(parameter2)
 	    && UART_OutChar(parameter3)
 	    && UART_OutChar(command ^ parameter1 ^ parameter2 ^ parameter3));
+
+	// Relinquish exclusive access to packet put
+	OS_SemaphoreSignal(PacketPutSemaphore);
 
 	// Enable transmit interrupt flag
 	UART2_C2 |= UART_C2_TIE_MASK;

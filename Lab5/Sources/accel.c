@@ -200,23 +200,51 @@ const static uint8_t WHO_AM_I_REG_ADDR = 0x0D;
 
 bool Accel_Init(const TAccelSetup* const accelSetup)
 {
-	// Set receive variable to private global variable
-  //AccModuleClk = accelSetup->moduleClk;
-  ADRCallback =  accelSetup->dataReadyCallbackFunction;
-  ADRArgs =  accelSetup->dataReadyCallbackArguments;
-  ARCCallback = accelSetup->readCompleteCallbackFunction;
-  ARCArgs = accelSetup->readCompleteCallbackArguments;
-
 	// Pass on the slave address, module clock and relevant callbacks
 	TI2CModule I2CModule = {
 		MMA_ADDR_SA0H,
-		100000,
-		ARCCallback,
-		ARCArgs
+		100000
 	};
 
 	// Initialise I2C
 	I2C_Init(&I2CModule, accelSetup->moduleClk);
+
+	// Disable active mode before setting values
+	CTRL_REG1_ACTIVE = 0;
+	I2C_Write(ADDRESS_CTRL_REG1, CTRL_REG1);
+
+	// Control register 1 - Set relevant masks
+	// Keeps normal mode for low noise
+	// Init with a rate of 1.56 Hz
+	CTRL_REG1_DR = DATE_RATE_1_56_HZ;
+	CTRL_REG1_F_READ = 1;
+	CTRL_REG1_LNOISE = 0;
+	CTRL_REG1_ASLP_RATE = SLEEP_MODE_RATE_1_56_HZ;
+	I2C_Write(ADDRESS_CTRL_REG1, CTRL_REG1);
+
+	// Control register 2 - Reset accelerator before use
+	//I2C_Write(ADDRESS_CTRL_REG2, ADDRESS_CTL_REG2_RST_MASK);
+
+	// Control register 3 - Set relevant masks
+	// Set push-pull mode
+	CTRL_REG3_PP_OD = 0;
+  CTRL_REG3_IPOL = 1; 				// Set for Active High
+	I2C_Write(ADDRESS_CTRL_REG3, CTRL_REG3);
+
+	// Control register 4 - Set relevant masks
+	// Disable data ready interrupts
+	CTRL_REG4_INT_EN_DRDY = 0;
+	I2C_Write(ADDRESS_CTRL_REG4, CTRL_REG4);
+
+	// Control register 5
+	// Set data ready interrupt to use INT1 pin
+  CTRL_REG5_INT_CFG_DRDY = 1;
+	I2C_Write(ADDRESS_CTRL_REG5, CTRL_REG5);
+
+	// Control register 1
+	// Activate active mode after setting values
+	CTRL_REG1_ACTIVE = 1;
+	I2C_Write(ADDRESS_CTRL_REG1, CTRL_REG1);
 
 	// Enable PORTB module clock gate
 	SIM_SCGC5 |= SIM_SCGC5_PORTB_MASK;
@@ -229,39 +257,6 @@ bool Accel_Init(const TAccelSetup* const accelSetup)
 	NVICICPR2 = (1 << 24);
 	// Set enable interrupts
 	NVICISER2 = (1 << 24);
-
-	// Control register 1 - Set relevant masks
-	// Disable active mode before setting values
-	// Keeps normal mode for low noise
-	// Init with a rate of 1.56 Hz
-	CTRL_REG1_ACTIVE = 0;
-	CTRL_REG1_DR = DATE_RATE_1_56_HZ;
-	CTRL_REG1_F_READ = 1;
-	CTRL_REG1_LNOISE = 0;
-	CTRL_REG1_ASLP_RATE = SLEEP_MODE_RATE_1_56_HZ;
-	I2C_Write(ADDRESS_CTRL_REG1, CTRL_REG1);
-
-	// Control register 2 - Reset accelerator before use
-	I2C_Write(ADDRESS_CTRL_REG2, ADDRESS_CTL_REG2_RST_MASK);
-
-	// Control register 3 - Set relevant masks
-	// Set push-pull mode
-	CTRL_REG3_PP_OD = 0;
-	I2C_Write(ADDRESS_CTRL_REG3, CTRL_REG3);
-
-	// Control register 4 - Set relevant masks
-	// Disable data ready interrupts
-	CTRL_REG4_INT_EN_DRDY = 0;
-	I2C_Write(ADDRESS_CTRL_REG4, CTRL_REG4);
-
-	// Control register 5
-	// Set data ready interrupt to use INT1 pin	(set everything enabled)
-	I2C_Write(ADDRESS_CTRL_REG5, CTRL_REG5);
-
-	// Control register 1
-	// Activate active mode after setting values
-		CTRL_REG1_ACTIVE = 1;
-		I2C_Write(ADDRESS_CTRL_REG1, CTRL_REG1);
 }
 
 
@@ -286,21 +281,22 @@ void Accel_SetMode(const TAccelMode mode)
 	CTRL_REG1_ACTIVE = 0;
 	I2C_Write(ADDRESS_CTRL_REG1, CTRL_REG1);
 
+	// Poll mode = I2C Master initiates read of data from accelerometer slave
+	if (ProtocolMode == ACCEL_POLL)
+	{
+		// Disable data ready interrupt
+		CTRL_REG4_INT_EN_DRDY = 0;
+		I2C_Write(ADDRESS_CTRL_REG4, CTRL_REG4);
+	}
+
 	// Interrupt mode = Accelerometer interrupts when data is ready
-	if (ProtocolMode == ACCEL_INT)
+	else if (ProtocolMode == ACCEL_INT)
 	{
 		// Enable data ready interrupt
 		CTRL_REG4_INT_EN_DRDY = 1;
 		I2C_Write(ADDRESS_CTRL_REG4, CTRL_REG4);
 	}
 
-	// Poll mode = I2C Master initiates read of data from accelerometer slave
-	else
-	{
-		// Disable data ready interrupt
-		CTRL_REG4_INT_EN_DRDY = 0;
-		I2C_Write(ADDRESS_CTRL_REG4, CTRL_REG4);
-	}
 	// Activate active mode after setting values
 	CTRL_REG1_ACTIVE = 1;
 	I2C_Write(ADDRESS_CTRL_REG1, CTRL_REG1);
@@ -309,14 +305,18 @@ void Accel_SetMode(const TAccelMode mode)
 
 void __attribute__ ((interrupt)) AccelDataReady_ISR(void)
 {
+	OS_ISREnter();
+
 	// Check if interrupt is pending
   if (PORTB_PCR7 & PORT_PCR_ISF_MASK)
   {
   	// Clear interrupt flag
     PORTB_PCR7 |= PORT_PCR_ISF_MASK;
-    // Invoke AccelDataReady Callback
-    ADRCallback(ADRArgs);
+    // Invoke AccelThread semaphore
+    OS_SemaphoreSignal(AccelSemaphore);
   }
+
+  OS_ISRExit();
 }
 
 

@@ -88,10 +88,10 @@ void PIT_Enable(const bool enable)
 
 void __attribute__ ((interrupt)) PIT_ISR(void)
 {
+	OS_ISREnter();
+
 	// Clear flag by set bit to 1
 	 PIT_TFLG0 |= PIT_TFLG_TIF_MASK;
-
-	OS_ISREnter();
 
 	// Signal PIT semaphore
 	(void)OS_SemaphoreSignal(PITSemaphore);
