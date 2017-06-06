@@ -18,14 +18,16 @@
 
 // new types
 #include "types.h"
+#include "OS.h"
+
+OS_ECB *I2CSemaphore;		/*!< Binary semaphore for I2CThread */
+OS_ECB *I2CWriteSemaphore; /*!< Binary semaphore for I2C_Write */
 
 typedef struct
 {
   uint8_t primarySlaveAddress;
   uint32_t baudRate;
-  void (*readCompleteCallbackFunction)(void*);  /*!< The user's read complete callback function. */
-  void* readCompleteCallbackArguments;          /*!< The user's read complete callback function arguments. */
-} TI2CModule;
+ } TI2CModule;
 
 /*! @brief Sets up the I2C before first use.
  *

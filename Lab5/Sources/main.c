@@ -63,14 +63,16 @@
 // Thread variables
 #define THREAD_STACK_SIZE 100
 static uint32_t InitThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08)));  /*!< The stack for the Init thread. */
-static uint32_t MainThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08))); /*!< The stack for the Main thread. */
 static uint32_t RTCThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08))); /*!< The stack for the Main thread. */
 static uint32_t PITThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08))); /*!< The stack for the PIT thread. */
 static uint32_t FTMThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08))); /*!< The stack for the FTM thread. */
 static uint32_t PacketThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08))); /*!< The stack for the packet thread. */
 
+static uint32_t I2CThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08))); /*!< The stack for the packet thread. */
+static uint32_t AccelThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08))); /*!< The stack for the packet thread. */
+
+
 static OS_ECB *InitSemaphore;    /*!< Binary semaphore for Init thread*/
-static OS_ECB *MainSemaphore;   /*!< Binary semaphore for Main thread */
 
 // Special constant
 #define ACCEL_DATA_SIZE 3
@@ -84,23 +86,12 @@ static uint16union_t volatile *NvTowerMd;
 
 // Initialise accel mode variable
 static TAccelMode ModeAccel;
-// Initialise accel poll flag
-static bool PollI2C;
 //Initialise accel interrupt data ready flag
 static bool DataReady;
 // Initialise variable to store accel history
 static TAccelData AccelData[ACCEL_DATA_SIZE];
 // Initialise new accel data
 static TAccelData newAccelData;
-
-
-// Declare function to be use in struct
-static void FTMCallback(void* arg);
-static void FTMCallback(void* arg);
-static void AccelCallback(void* arg);
-static void I2CCallback(void* arg);
-static void I2CPoll();
-static void HandleAccelPollRead();
 
 // Initialise FTM channel0
 static TFTMChannel FTMChannel0 =
@@ -113,25 +104,10 @@ static TFTMChannel FTMChannel0 =
 	NULL // FTM user argument
 };
 
-// Initialise FTM channel1 for I2C
-static TFTMChannel FTMChannel1 =
-{
-	1,
-	CPU_MCGFF_CLK_HZ_CONFIG_0, // 1Hz frequency
-	TIMER_FUNCTION_OUTPUT_COMPARE, // FTM Mode
-	TIMER_OUTPUT_DISCONNECT, // FTM edge/level select
-	&I2CPoll, // I2C poll signal
-	NULL // FTM user argument
-};
-
 // Initialise Accelerometer setup
 static TAccelSetup AccelSetup =
 {
 	CPU_BUS_CLK_HZ,
-	*AccelCallback,
-	(void *) 0,
-	*I2CCallback,
-	(void *) 0
 };
 
 /*! Reads the command byte and processes relevant functionality
@@ -293,117 +269,17 @@ bool PacketProcessor(void)
   }
 }
 
-
-
-/*! @brief PIT interrupt user thread
- *  
- *	Confirm interrupt occurred
- *	Toggle green LED
- *  @return void
- */
-static void PITThread(void* arg)
-{
-  for (;;)
-  {
-  	OS_SemaphoreWait(PITSemaphore, 0);
-
-  	// Toggles green LED
-		LEDs_Toggle(LED_GREEN);
-  }
-}
-
-/*! @brief RTC interrupt user thread
- *
- *  Send current time to PC
- *	Toggle yellow LED
- *  @return void
- */
-static void RTCThread(void* pData)
-{
-	for(;;)
-	{
-		(void)OS_SemaphoreWait(RTCSemaphore, 0);
-		// Variables to store current time
-		uint8_t hours, minutes, seconds;
-
-		// Gets current time
-		RTC_Get(&hours, &minutes, &seconds);
-
-		// Sets updated time
-		Packet_Put(CMD_SET_TIME, hours, minutes, seconds);
-		// Toggles yellow LED
-		LEDs_Toggle(LED_YELLOW);
-
-		// Accel poll read
-		if ((ModeAccel == ACCEL_POLL))
-		{
-			HandleAccelPollRead(); // Poll I2C
-			LEDs_Toggle(LED_GREEN);
-		}
-	}
-}
-
-/*! @brief FTM interrupt user thread
- *
- *	Toggle blue LED
- *  @return void
- */
-static void FTMThread(void* arg)
-{
-	for(;;)
-	{
-		(void)OS_SemaphoreWait(FTMSemaphore, 0);
-
-		// Turn LED off after FTM interrupt
-		LEDs_Off(LED_BLUE);
-	}
-}
-
-/*! @brief Packet interrupt user thread
- *
- *	Process packet
- *	Toggle blue LED
- *  @return void
- */
-static void PacketThread(void* pData)
-{
-  for (;;)
-  {
-  	OS_SemaphoreWait(PacketSemaphore, 0);
-
-  	while (!(Packet_Get()))
-		{
-
-		}
-		LEDs_On(LED_BLUE);
-		FTM_StartTimer(&FTMChannel0); // Start timer for output compare
-		PacketProcessor(); //Handle packet according to the command byte
-  }
-}
-
 /*! @brief Calculates median xyz values and sends it to pc
  *
  * @return void
  */
-void SendMeanAccelPacket()
+static void SendMeanAccelPacket()
 {
 	uint8_t xMed = Median_Filter3(AccelData[0].bytes[0], AccelData[1].bytes[0], AccelData[2].bytes[0]);
 	uint8_t yMed = Median_Filter3(AccelData[0].bytes[1], AccelData[1].bytes[1], AccelData[2].bytes[1]);
 	uint8_t zMed = Median_Filter3(AccelData[0].bytes[2], AccelData[1].bytes[2], AccelData[2].bytes[2]);
 
 	Packet_Put(CMD_ACCEL_VAL, xMed, yMed, zMed);
-}
-
-/*! @brief Signals I2C needs to be polled
- *
- *  @return void
- */
-void I2CPoll()
-{
-	// Set PollI2C to true, to receive next data
-	PollI2C = true;
-
-	LEDs_Toggle(LED_GREEN);
 }
 
 /*! @brief Gets incoming xyz data via polling and adds it to the AccelData history
@@ -429,57 +305,132 @@ static void HandleAccelPollRead()
 	SendMeanAccelPacket();
 }
 
-/*! @brief Signals I2C needs to be callback
+/*! @brief PIT interrupt user thread
+ *  
+ *	Confirm interrupt occurred
+ *	Toggle green LED
+ *  @return void
+ */
+static void PITThread(void* pData)
+{
+  for (;;)
+  {
+  	OS_SemaphoreWait(PITSemaphore, 0);
+
+  	// Toggles green LED
+		LEDs_Toggle(LED_GREEN);
+  }
+}
+
+/*! @brief RTC interrupt user thread
+ *
+ *  Send current time to PC
+ *	Toggle yellow LED
+ *  @return void
+ */
+static void RTCThread(void* pData)
+{
+	for(;;)
+	{
+		OS_SemaphoreWait(RTCSemaphore, 0);
+		// Variables to store current time
+		uint8_t hours, minutes, seconds;
+
+		// Gets current time
+		RTC_Get(&hours, &minutes, &seconds);
+
+		// Sets updated time
+		Packet_Put(CMD_SET_TIME, hours, minutes, seconds);
+		// Toggles yellow LED
+		LEDs_Toggle(LED_YELLOW);
+
+		// Accel poll read
+		if ((ModeAccel == ACCEL_POLL))
+		{
+			HandleAccelPollRead(); // Poll I2C
+			LEDs_Toggle(LED_GREEN);
+		}
+	}
+}
+
+/*! @brief FTM interrupt user thread
+ *
+ *	Toggle blue LED
+ *  @return void
+ */
+static void FTMThread(void* pData)
+{
+	for(;;)
+	{
+		OS_SemaphoreWait(FTMSemaphore, 0);
+
+		// Turn LED off after FTM interrupt
+		LEDs_Off(LED_BLUE);
+	}
+}
+
+/*! @brief Packet interrupt user thread
+ *
+ *	Process packet
+ *	Toggle blue LED
+ *  @return void
+ */
+static void PacketThread(void* pData)
+{
+  for (;;)
+  {
+  	OS_SemaphoreWait(PacketSemaphore, 0);
+
+  	// Wait for packet
+  	while (!(Packet_Get()));
+
+		LEDs_On(LED_BLUE);
+		FTM_StartTimer(&FTMChannel0); // Start timer for output compare
+		PacketProcessor(); //Handle packet according to the command byte
+  }
+}
+
+/*! @brief I2C Thread
  *
  *  @return void
  */
-void I2CCallback(void* arg)
+void I2CThread(void* pData)
 {
-	SendMeanAccelPacket();
-
-	// TODO: maybe in accelcallback after accel read.
-	LEDs_Toggle(LED_GREEN);
-
-	// Set data ready to true, to receive next data
-	DataReady = true;
+	for (;;)
+	{
+		OS_SemaphoreWait(I2CSemaphore, 0);
+		SendMeanAccelPacket();
+	}
 }
 
-/*! @brief Signal Accel callback
+/*! @brief Accel Thread
  *
  * @return void
  */
-void AccelCallback(void* arg)
+void AccelThread(void* pData)
 {
-	if (DataReady)
+	for(;;)
 	{
-		DataReady = false; // Set to false to prevent new data from initialising
+		OS_SemaphoreWait(AccelSemaphore, 0);
+
+		LEDs_Toggle(LED_GREEN);
+		// Shifts current data down - freeing up 0 index
+//		for(int history = 2; history>0; history--)
+//		{
+//			AccelData[history].bytes[0] = AccelData[history-1].bytes[0];
+//			AccelData[history].bytes[1] = AccelData[history-1].bytes[1];
+//			AccelData[history].bytes[2] = AccelData[history-1].bytes[2];
+//		}
+//
+//		AccelData[0].bytes[0] = newAccelData.bytes[0];
+//		AccelData[0].bytes[1] = newAccelData.bytes[1];
+//		AccelData[0].bytes[2] = newAccelData.bytes[2];
 
 		Accel_ReadXYZ(newAccelData.bytes);
 
-		// Shifts current data down - freeing up 0 index
-		for(int history = 2; history>0; history--)
-		{
-				AccelData[history].bytes[0] = AccelData[history-1].bytes[0];
-				AccelData[history].bytes[1] = AccelData[history-1].bytes[1];
-				AccelData[history].bytes[2] = AccelData[history-1].bytes[2];
-		}
-
-		AccelData[0].bytes[0] = newAccelData.bytes[0];
-		AccelData[0].bytes[1] = newAccelData.bytes[1];
-		AccelData[0].bytes[2] = newAccelData.bytes[2];
 	}
-
-	// Call I2C interrupt read
-	I2C_IntRead(0x01, AccelData[0].bytes, 3);
-
-//	Accel_ReadXYZ(newAccelData.bytes);
-//
-//	AccelData[0].bytes[0] = newAccelData.bytes[0];
-//	AccelData[0].bytes[1] = newAccelData.bytes[1];
-//	AccelData[0].bytes[2] = newAccelData.bytes[2];
-//
-//	SendMeanAccelPacket();
 }
+
 
 /*! @brief Initialisation thread
  *
@@ -493,12 +444,12 @@ static void InitThread(void* pData)
 		// Disable global interrupt
 		OS_DisableInterrupts();
 
-		//(void)OS_SemaphoreWait(InitSemaphore, 0);
+		(void)OS_SemaphoreWait(InitSemaphore, 0);
 		// Initialise Packet
 		bool packInit = Packet_Init(BAUD_RATE, CPU_BUS_CLK_HZ);
 
 		// Create semaphores
-		OS_ThreadCreate(PacketThread, NULL, &PacketThreadStack[THREAD_STACK_SIZE-1],6);
+		OS_ThreadCreate(PacketThread, NULL, &PacketThreadStack[THREAD_STACK_SIZE-1],8);
 	  OS_ThreadCreate(PITThread, NULL, &PITThreadStack[THREAD_STACK_SIZE-1],2);
 	  OS_ThreadCreate(FTMThread, NULL, &FTMThreadStack[THREAD_STACK_SIZE-1],1);
 
@@ -526,8 +477,6 @@ static void InitThread(void* pData)
 
 	  // Initialise Accel (inits I2C)
 	  Accel_Init(&AccelSetup);
-	  PollI2C = true;
-	  DataReady = true;
 	  ModeAccel = ACCEL_POLL;
 
 		// Allocate flash addresses for tower number and mode
@@ -552,31 +501,9 @@ static void InitThread(void* pData)
 
 		// Enable global interrupt
 		OS_EnableInterrupts();
-
-		(void)OS_SemaphoreSignal(MainSemaphore);
 		OS_ThreadDelete(0);
 	}
 }
-
-// MainThread
-static void MainThread(void* pData)
-{
-
-  for (;;)
-  {
-  	(void)OS_SemaphoreWait(MainSemaphore, 0);
-			// Polling method for asynchronous mode
-//			if ((ModeAccel == ACCEL_POLL) && PollI2C)
-//			{
-//				FTM_StartTimer(&FTMChannel1); // Start timer for accelerometer
-//				HandleAccelPollRead(); // Poll I2C
-//				PollI2C = false; // Wait for next poll
-//			}
-    (void)OS_SemaphoreSignal(MainSemaphore);
-  }
-}
-
-
 
 /*lint -save  -e970 Disable MISRA rule (6.3) checking. */
 int main(void)
@@ -597,16 +524,22 @@ int main(void)
   OS_Init(CPU_CORE_CLK_HZ, true);
 
   // Create semaphores
-  MainSemaphore = OS_SemaphoreCreate(0);
-  InitSemaphore = OS_SemaphoreCreate(0);
+  InitSemaphore = OS_SemaphoreCreate(1);
 	RTCSemaphore = OS_SemaphoreCreate(1);
 	PITSemaphore = OS_SemaphoreCreate(1);
 	FTMSemaphore = OS_SemaphoreCreate(1);
+	PacketSemaphore = OS_SemaphoreCreate(0);
+
+//	I2CSemaphore = OS_SemaphoreCreate(0);
+//	AccelSemaphore = OS_SemaphoreCreate(0);
+
 
 	// Create first set of threads
-  error = OS_ThreadCreate(MainThread, NULL, &MainThreadStack[THREAD_STACK_SIZE-1],10);
   error = OS_ThreadCreate(InitThread, NULL, &InitThreadStack[THREAD_STACK_SIZE-1],0);
   error = OS_ThreadCreate(RTCThread, NULL, &RTCThreadStack[THREAD_STACK_SIZE-1],4);
+
+//  error = OS_ThreadCreate(I2CThread, NULL, &RTCThreadStack[THREAD_STACK_SIZE-1],7);
+//  error = OS_ThreadCreate(AccelThread, NULL, &RTCThreadStack[THREAD_STACK_SIZE-1],6);
 
   OS_Start();
 

@@ -21,9 +21,6 @@ static uint8_t SlaveAddr;
 static uint8_t *ReadDestination; // Where we store data that is read
 static uint8_t RegAddr; // Register address
 static uint8_t TxNumBytes; // Number of bytes requested
-static void (*I2CCallback)(void*); // User callback function pointer
-static void* I2CArguments; // User arguments pointer to use with user callback function
-
 static uint8_t InterruptCount;
 
 // Arrays for I2C baud rate calculation (K70 p.1863)
@@ -31,7 +28,6 @@ const static uint8_t MUL_VAL [] = {0x01, 0x02, 0x04 };
 const static uint16_t SCL_DIV_VAL[] = {20,22,24,26,28,30,32,34,36,40,44,48,56,64,68,
 		72,80,88,96,104,112,128,144,160,192,224,240,256,288,320,384,448,480,512,
 		576,640,768,896,960,1024,1152,1280,1536,1792,1920,2048,2304,2560,3072,3840};
-
 
 
 /*! @brief Indicate that an event has occur on the I2C bus
@@ -51,13 +47,20 @@ static void I2CInterruptWait()
 	I2C0_S = I2C_S_IICIF_MASK;
 }
 
-// MOVE ME (FIX)
+/*! @brief Wait for the I2C bus mask to idle
+ *
+ * @return void
+ */
 static void I2CBusWait ()
 {
 	// Wait for bus idle
 	while ((I2C0_S & I2C_S_BUSY_MASK) == I2C_S_BUSY_MASK);
 }
 
+/*! @brief Start signal and transmit mode
+ *
+ * @return void
+ */
 static void I2CStart()
 {
 	// Start signal and transmit mode
@@ -72,13 +75,16 @@ static void I2CStop()
 {
 	// Clear master mode bit to generate stop signal
 	I2C0_C1 &= ~(I2C_C1_MST_MASK);
-
 	// Clear transmit mode bit to select receive mode
 	I2C0_C1 &= ~(I2C_C1_TX_MASK);
 
 }
 
-void BaudRate() {
+/*! @brief Set I2C baud rate
+ *
+ * @return void
+ */
+static void BaudRate() {
 	I2C0_F = I2C_F_MULT(MUL_VAL[0x00]) | I2C_F_ICR(0x23); 				// Set most achievable multiplier
 
 //	I2C0_F = I2C_F_ICR(0x23); // Set most achievable baud rate
@@ -107,14 +113,10 @@ void BaudRate() {
 
 bool I2C_Init(const TI2CModule* const aI2CModule, const uint32_t moduleClk)
 {
+	I2CWriteSemaphore = OS_SemaphoreCreate(1);
 	// Set received baud rate to private variable
 	uint32_t receivedBaudRate;
 	receivedBaudRate = aI2CModule->baudRate; // Check naming convention again!
-
-	// Set received variable to private global variable
-	//SlaveAddr = aI2CModule->primarySlaveAddress;//TODO: Fix this
-	I2CCallback = aI2CModule->readCompleteCallbackFunction;
-	I2CArguments = aI2CModule->readCompleteCallbackArguments;
 
 	// Enable I2C module clock gate
 	SIM_SCGC4 |= SIM_SCGC4_IIC0_MASK;
@@ -150,15 +152,6 @@ bool I2C_Init(const TI2CModule* const aI2CModule, const uint32_t moduleClk)
 	// I2C baud rate = I2C module clock speed (Hz)/(mul × SCL divider)
 	BaudRate();
 
-	// Initial slave routine selection (NEW)
-	//I2C_SelectSlaveDevice(SlaveAddr);
-
-	// Enable I2C interrupt
-	//I2C0_C1 = I2C_C1_IICIE_MASK;
-
-	// Enable I2C module operation
-	I2C0_C1 |= I2C_C1_IICEN_MASK;
-
 	I2C_SelectSlaveDevice(aI2CModule->primarySlaveAddress);
 
 	//Initilise NVIC
@@ -167,8 +160,10 @@ bool I2C_Init(const TI2CModule* const aI2CModule, const uint32_t moduleClk)
 	// Set enable interrupt for I2C
 	NVICISER0 = (1<<24);
 
-	return true;
+	// Enable I2C module operation
+	I2C0_C1 |= I2C_C1_IICEN_MASK;
 
+	return true;
 }
 
 
@@ -183,6 +178,9 @@ void I2C_Write(const uint8_t registerAddress, const uint8_t data)
 
 	// Wait for bus idle
 	I2CBusWait();
+
+	// Obtain exclusive access to write
+	OS_SemaphoreWait(I2CWriteSemaphore,0);
 
 	// Start signal and transmit mode
 	I2CStart();
@@ -201,6 +199,8 @@ void I2C_Write(const uint8_t registerAddress, const uint8_t data)
 
 	I2CStop();
 
+	// Relinquish exclusive access to write
+	OS_SemaphoreSignal(I2CWriteSemaphore);
 }
 
 
@@ -264,8 +264,8 @@ void I2C_IntRead(const uint8_t registerAddress, uint8_t* const data, const uint8
 	ReadDestination = data;
 	TxNumBytes = nbBytes;
 
-//	// Enable interrupt
-//	I2C0_C1 |= I2C_C1_IICIE_MASK;
+	// Enable interrupt
+	I2C0_C1 |= I2C_C1_IICIE_MASK;
 
 	// Wait for bus idle and clear interrupt flag
 	I2CBusWait();
@@ -302,6 +302,8 @@ void I2C_IntRead(const uint8_t registerAddress, uint8_t* const data, const uint8
 
 void __attribute__ ((interrupt)) I2C_ISR(void)
 {
+	OS_ISREnter();
+
 	uint8_t dataCount = 0;
 
 	// Handle interrupt
@@ -331,8 +333,8 @@ void __attribute__ ((interrupt)) I2C_ISR(void)
 						I2C0_C1 |= I2C_C1_TXAK_MASK;
 						// Read last byte
 						ReadDestination[dataCount++] = I2C0_D;
-						// Handle callback
-						I2CCallback(I2CArguments);
+						// Handle I2C thread
+						OS_SemaphoreSignal(I2CSemaphore);
 						break;
 
 					default:
@@ -345,7 +347,7 @@ void __attribute__ ((interrupt)) I2C_ISR(void)
 
 		}
 	}
-
+OS_ISRExit();
 }
 
 /*!
