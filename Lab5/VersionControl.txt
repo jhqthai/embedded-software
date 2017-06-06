@@ -12,8 +12,15 @@ RTOS in completed for RTC, FTM, PIT
 UART RTOS completed 
 PIT RTOS completed
 RTC RTOS completed
+
+06/06/17
 Added new Accel.c and I2C.c
 Accel poll completed
 
+07/06/17
+Accel interrupting
+Implemented all threads
+
+
 TODO:
-ACCEL & I2C INTERRUPT
+Modify main for accurate data receive for interrupt?
