@@ -20,7 +20,7 @@
 #include "types.h"
 #include "OS.h"
 
-static OS_ECB *PITSemaphore;   /*!< Binary semaphore for PIT thread */
+OS_ECB *PITSemaphore;		/*!< Binary semaphore for PIT thread */
 
 /*! @brief Sets up the PIT before first use.
  *

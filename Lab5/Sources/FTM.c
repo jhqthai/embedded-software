@@ -20,9 +20,6 @@
 #define MCGFFCLK 0x02 //Fix frequency clock bit
 #define NUM_OF_CHANNELS 8 // Number of supported channels
 
-static void (*FTMCallback[NUM_OF_CHANNELS])(void*); // User callback function pointer
-static void* FTMArguments[NUM_OF_CHANNELS]; // User arguments pointer to use with user callback function
-
 
 bool FTM_Init()
 {
@@ -94,9 +91,6 @@ bool FTM_StartTimer(const TFTMChannel* const aFTMChannel)
 			// Add delay to counter and store as interrupt time
 			FTM0_CnV(aFTMChannel->channelNb) = FTM0_CNT + aFTMChannel->delayCount;
 
-			// Store callback function and arguments in a global private array for interrupt usage
-			FTMCallback[aFTMChannel->channelNb] = aFTMChannel->userFunction;
-			FTMArguments[aFTMChannel->channelNb] = aFTMChannel->userArguments;
 			return true;
 	}
 	return false;
@@ -114,9 +108,8 @@ void __attribute__ ((interrupt)) FTM0_ISR(void)
 			// Reset interrupts
 			FTM0_CnSC(i) &= ~(FTM_CnSC_CHF_MASK | FTM_CnSC_CHIE_MASK);
 
-			// Runs callback method if interrupt requested
-			if (FTMCallback[i])
-				(*FTMCallback[i])(FTMArguments[i]);
+			// Signal FTM semaphore
+			(void)OS_SemaphoreSignal(FTMSemaphore);
 		}
 	}
 }

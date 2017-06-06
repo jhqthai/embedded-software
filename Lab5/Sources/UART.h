@@ -20,8 +20,6 @@
 #include "types.h"
 #include "OS.h"
 
-OS_ECB *TxSemaphore;		/*!< Binary semaphore for UART Tx thread */
-OS_ECB *RxSemaphore;		/*!< Binary semaphore for UART Rx thread */
 
 /*! @brief Sets up the UART interface before first use.
  *
@@ -30,7 +28,6 @@ OS_ECB *RxSemaphore;		/*!< Binary semaphore for UART Rx thread */
  *  @return bool - TRUE if the UART was successfully initialized.
  */
 bool UART_Init(const uint32_t baudRate, const uint32_t moduleClk);
- 
 /*! @brief Get a character from the receive FIFO if it is not empty.
  *
  *  @param dataPtr A pointer to memory to store the retrieved byte.

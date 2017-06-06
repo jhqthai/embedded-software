@@ -19,14 +19,11 @@
 #include "MK70F12.h"
 
 static uint32_t PITModuleClk; // Module clock rate in HZ
-//static void (*PITCallback)(void*); // User callback function pointer
-//static void* PITArguments; // User arguments pointer to use with user callback function
+
 
 
 bool PIT_Init(const uint32_t moduleClk)
 {
-	PITSemaphore = OS_SemaphoreCreate(0);
-
 	// Set receive variable to private global variable
 	PITModuleClk = moduleClk;
 
@@ -77,9 +74,6 @@ void PIT_Set(const uint32_t period, const bool restart)
 	}
 	else
 		PIT_LDVAL0 = PIT_LDVAL_TSV(triggerLDVAL);
-
-	// TODO: NEW Enable Timer0 interrupt
-	PIT_TCTRL0 = PIT_TCTRL_TIE_MASK;
 }
 
 
@@ -94,13 +88,13 @@ void PIT_Enable(const bool enable)
 
 void __attribute__ ((interrupt)) PIT_ISR(void)
 {
+	// Clear flag by set bit to 1
+	 PIT_TFLG0 |= PIT_TFLG_TIF_MASK;
+
 	OS_ISREnter();
 
-	// Clear flag by set bit to 1
-	PIT_TFLG0 |= PIT_TFLG_TIF_MASK;
-
-	// Signal semaphore to indicate ready
-	OS_SemaphoreSignal(PITSemaphore);
+	// Signal PIT semaphore
+	(void)OS_SemaphoreSignal(PITSemaphore);
 
 	OS_ISRExit();
 }

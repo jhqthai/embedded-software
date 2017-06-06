@@ -19,11 +19,11 @@
 ** @brief
 **         Main module.
 **         This module contains user's application code.
-*/
+*/         
 /*!
 **  @addtogroup main_module main module documentation
 **  @{
-*/
+*/         
 /* MODULE main */
 
 
@@ -42,9 +42,10 @@
 #include "PIT.h"
 #include "RTC.h"
 #include "FTM.h"
-//#include "accel.h"
-//#include "I2C.h"
-//#include "median.h"
+#include "accel.h"
+#include "I2C.h"
+#include "median.h"
+// Advanced OS
 #include "OS.h"
 
 // Defining constants
@@ -63,11 +64,10 @@
 #define THREAD_STACK_SIZE 100
 static uint32_t InitThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08)));  /*!< The stack for the Init thread. */
 static uint32_t MainThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08))); /*!< The stack for the Main thread. */
-//static uint32_t RTCThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08))); /*!< The stack for the RTC thread. */
-static uint32_t TxUARTThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08))); /*!< The stack for the uart tx thread. */
-static uint32_t RxUARTThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08))); /*!< The stack for the uart rx thread. */
+static uint32_t RTCThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08))); /*!< The stack for the Main thread. */
+static uint32_t PITThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08))); /*!< The stack for the PIT thread. */
+static uint32_t FTMThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08))); /*!< The stack for the FTM thread. */
 static uint32_t PacketThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08))); /*!< The stack for the uart rx thread. */
-static uint32_t PITThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08))); /*!< The stack for the RTC thread. */
 
 static OS_ECB *InitSemaphore;    /*!< Binary semaphore for Init thread*/
 static OS_ECB *MainSemaphore;   /*!< Binary semaphore for Main thread */
@@ -78,29 +78,53 @@ static OS_ECB *MainSemaphore;   /*!< Binary semaphore for Main thread */
 static const uint32_t BAUD_RATE  = 115200;
 
 // Global variables
-//static volatile uint8_t *Write8;
+static volatile uint8_t *Write8;
 static uint16union_t volatile *NvTowerNb;
 static uint16union_t volatile *NvTowerMd;
 
 // Declare function to be use in struct
 static void FTMCallback(void* arg);
+static void I2CPollCallback(void* arg);
 
 // Initialise FTM channel0
 static TFTMChannel FTMChannel0 =
 {
 	0,
-	CPU_MCGFF_CLK_HZ_CONFIG_0, // Delay count
+	CPU_MCGFF_CLK_HZ_CONFIG_0, // Clock source
 	TIMER_FUNCTION_OUTPUT_COMPARE, // FTM Mode
 	TIMER_OUTPUT_DISCONNECT, // FTM edge/level select
-	&FTMCallback, // FTM user function
+	NULL, // FTM user function
 	NULL // FTM user argument
 };
+
+// Initialise FTM channel1 for I2C
+static TFTMChannel FTMChannel1 =
+{
+	1,
+	CPU_MCGFF_CLK_HZ_CONFIG_0, // Clock source
+	TIMER_FUNCTION_OUTPUT_COMPARE, // FTM Mode
+	TIMER_OUTPUT_DISCONNECT, // FTM edge/level select
+	NULL, // FTM user function
+	NULL // FTM user argument
+};
+
+
+
+// Initialise accel mode variable
+static TAccelMode modeAccel;
+
+// Initialise accel Poll flag
+static bool pollI2C;
+
+// Initialise variable to store accel history
+static TAccelData AccelData[ACCEL_DATA_SIZE];
 
 /*! Reads the command byte and processes relevant functionality
  *  Also handles ACKing and NAKing
  *
+ *  @return bool - TRUE a valid case received & packet ACK
  */
-void PacketProcessor(void)
+bool PacketProcessor(void)
 {
   bool success;
 
@@ -112,10 +136,10 @@ void PacketProcessor(void)
       if ((Packet_Parameter1 | Packet_Parameter2 | Packet_Parameter3) == 0)
       {
         success = Packet_Put(CMD_SGET_STARTUP, 0x0, 0x0, 0x0);
-        success &= Packet_Put(CMD_SGET_VERSION, 0x76, 0x03, 0x00);
+        success &= Packet_Put(CMD_SGET_VERSION, 0x76, 0x05, 0x00);
         success &= Packet_Put(CMD_TOWER_NUMBER, 0x01, NvTowerNb->s.Lo, NvTowerNb->s.Hi);
         success &= Packet_Put(CMD_TOWER_MODE, 0x01, NvTowerMd->s.Lo, NvTowerMd->s.Hi);
-        //success &= Packet_Put(CMD_PROTO_MODE, 0x01, ModeAccel, 0x00);
+        success &= Packet_Put(CMD_PROTO_MODE, 0x01, modeAccel, 0x00);
       }
       else
         success = false;
@@ -199,7 +223,7 @@ void PacketProcessor(void)
 			else
 				success = false;
 				break;
-
+	
 		// Case Set Time
     case CMD_SET_TIME:
     	// Check to see if valid time is received
@@ -213,24 +237,22 @@ void PacketProcessor(void)
     		success = false;
     	break;
 
-//    // Case Protocol mode
-//    case CMD_PROTO_MODE:
-//    	// Get protocol mode
-//    	if ((Packet_Parameter1==1) && (Packet_Parameter2 == 0) && (Packet_Parameter3 == 0))
-//    		success = Packet_Put(CMD_PROTO_MODE, 0x01, ModeAccel, 0x00);
-//    	// Set protocol mode
-//    	else if ((Packet_Parameter1==2) && (Packet_Parameter3 == 0))
-//    	{
-//    		if(Packet_Parameter2) // Set to int/synch mode
-//    			ModeAccel = ACCEL_INT;
-//    		else // Set to poll/asynch mode
-//    			ModeAccel = ACCEL_POLL;
-//    		Accel_SetMode(ModeAccel);
-//    		success = true;
-//    	}
-//    	else
-//				success = false;
-//    	break;
+    // Case Protocol mode
+    case CMD_PROTO_MODE:
+    	// Set protocol mode
+    	if ((Packet_Parameter1==2) && (Packet_Parameter3 == 0))
+    	{
+    		if(Packet_Parameter2) // Set to int/synch mode
+    			modeAccel = ACCEL_INT;
+    		else // Set to poll/asynch mode
+    			modeAccel = ACCEL_POLL;
+    		Accel_SetMode(modeAccel);
+    		success = true;
+    	}
+    	// Get protocol mode
+    	if ((Packet_Parameter1==1) && (Packet_Parameter2 == 0) && (Packet_Parameter3 == 0))
+    		success = Packet_Put(CMD_PROTO_MODE, 0x01, modeAccel, 0x00);
+    	break;
 
     default:
       success = false;
@@ -243,90 +265,192 @@ void PacketProcessor(void)
     {
       // ACK the packet
       Packet_Put(Packet_Command, Packet_Parameter1, Packet_Parameter2, Packet_Parameter3);
-      success = true;
+      return true;
     }
     else
     {
       // NAK the packet
       Packet_Put(Packet_Command & ~PACKET_ACK_MASK, Packet_Parameter1, Packet_Parameter2, Packet_Parameter3);
-      success = false;
+      return false;
     }
   }
 }
 
 
-/*! @brief PIT interrupt user callback function
- *
+
+/*! @brief PIT interrupt user thread
+ *  
  *	Confirm interrupt occurred
  *	Toggle green LED
  *  @return void
  */
-static void PITThread(void* pData)
+static void PITThread(void* arg)
 {
-	for(;;)
-	{
-		OS_SemaphoreWait(PITSemaphore, 0);
+  for (;;)
+  {
+  	OS_SemaphoreWait(PITSemaphore, 0);
 
-		// Toggles green LED
+  	// Toggles green LED
 		LEDs_Toggle(LED_GREEN);
-	}
-
+  }
 }
 
-/*! @brief RTC interrupt user callback function
+/*! @brief RTC interrupt user thread
  *
  *  Send current time to PC
  *	Toggle yellow LED
  *  @return void
  */
-void RTCCallback(void* arg)
+static void RTCThread(void* arg)
 {
-	// Variables to store current time
-	uint8_t hours, minutes, seconds;
+	for(;;)
+	{
+		(void)OS_SemaphoreWait(RTCSemaphore, 0);
+		// Variables to store current time
+		uint8_t hours, minutes, seconds;
 
-	// Gets current time
-	RTC_Get(&hours, &minutes, &seconds);
+		// Gets current time
+		RTC_Get(&hours, &minutes, &seconds);
 
-	// Sets updated time
-	Packet_Put(CMD_SET_TIME, hours, minutes, seconds);
-
-	// Toggles yellow LED
-	LEDs_Toggle(LED_YELLOW);
+		// Sets updated time
+		Packet_Put(CMD_SET_TIME, hours, minutes, seconds);
+		// Toggles yellow LED
+		LEDs_Toggle(LED_YELLOW);
+	}
 }
 
-/*! @brief FTM interrupt user callback function
+/*! @brief FTM interrupt user thread
  *
  *	Toggle blue LED
  *  @return void
  */
-void FTMCallback(void* arg)
+static void FTMThread(void* arg)
 {
-	// Turn LED off after FTM interrupt
-	LEDs_Off(LED_BLUE);
+	for(;;)
+	{
+		(void)OS_SemaphoreWait(FTMSemaphore, 0);
+
+		// Turn LED off after FTM interrupt
+		LEDs_Off(LED_BLUE);
+	}
 }
 
 /*! @brief Signals I2C needs to be polled
  *
  *  @return void
  */
+void I2CPollCallback(void* arg)
+{
+	// Set pollI2C to true, to signal it is time to poll
+	pollI2C = true;
+}
 
-// PacketThread
+/*! @brief Packet interrupt user thread
+ *
+ *	Process packet
+ *	Toggle blue LED
+ *  @return void
+ */
 static void PacketThread(void* pData)
 {
   for (;;)
   {
-		// If a valid packet is received
-		if (Packet_Get())
+  	OS_SemaphoreWait(PacketSemaphore, 0);
+
+  	while (!(Packet_Get()))
 		{
-			//(void)OS_SemaphoreWait(PacketSemaphore, 0);
-			LEDs_On(LED_BLUE);
-			FTM_StartTimer(&FTMChannel0); // Start timer for output compare
-			PacketProcessor(); //Handle packet according to the command byte
+
 		}
+		LEDs_On(LED_BLUE);
+		FTM_StartTimer(&FTMChannel0); // Start timer for output compare
+		PacketProcessor(); //Handle packet according to the command byte
   }
 }
 
 
+/*! @brief Calculates median xyz values and sends it to pc
+ *
+ * @return void
+ */
+void SendMeanAccelPacket()
+{
+	uint8_t xMed = Median_Filter3(AccelData[0].axes.x, AccelData[1].axes.x, AccelData[2].axes.x);
+	uint8_t yMed = Median_Filter3(AccelData[0].axes.y, AccelData[1].axes.y, AccelData[2].axes.y);
+	uint8_t zMed = Median_Filter3(AccelData[0].axes.z, AccelData[1].axes.z, AccelData[2].axes.z);
+
+	Packet_Put(CMD_ACCEL_VAL, xMed, yMed, zMed);
+}
+
+
+/*! @brief Gets incoming xyz data via interrupt and adds it to the AccelData history
+ *
+ * @return void
+ */
+void HandleAccelIntRead()
+{
+	// Gets the latest accel data
+	uint8_t newData[3];
+	Accel_ReadXYZ(&newData[3]);
+
+	// Stores in struct
+	TAccelData latestData;
+	latestData.axes.x = newData[0];
+	latestData.axes.y = newData[1];
+	latestData.axes.z = newData[2];
+
+	// Shifts current data down - freeing up 0 index
+	for(int history = ACCEL_DATA_SIZE; history>0; history--)
+	{
+		AccelData[history] = AccelData[history-1];
+	}
+	AccelData[0] = latestData; // Places new data in 0 index
+	SendMeanAccelPacket();
+}
+
+/*! @brief Gets incoming xyz data via polling and adds it to the AccelData history
+ *
+ * @return void
+ */
+void HandleAccelPollRead()
+{
+	// Shifts current data down - freeing up 0 index
+	for(int history = ACCEL_DATA_SIZE; history>0; history--)
+	{
+		AccelData[history] = AccelData[history-1];
+	}
+
+	// Gets the latest accel data
+	uint8_t newData[3] = {0x00, 0x00, 0x00};
+
+	I2C_IntRead(0x1D, &newData[0], 3);
+
+	// Stores in struct
+	TAccelData latestData;
+	latestData.axes.x = newData[0];
+	latestData.axes.y = newData[1];
+	latestData.axes.z = newData[2];
+
+
+	// Places new data in 0 index
+	AccelData[0] = latestData;
+	SendMeanAccelPacket();
+}
+
+// Initialise Accelerometer setup
+static TAccelSetup AccelSetup =
+{
+	CPU_BUS_CLK_HZ,
+	&HandleAccelIntRead,
+	(void *) 0,
+	&HandleAccelPollRead,
+	(void *) 0
+};
+
+/*! @brief Initialisation thread
+ *
+ *  @return void
+ *  Note: Delete thread after initialisation
+ */
 static void InitThread(void* pData)
 {
 	for(;;)
@@ -334,13 +458,15 @@ static void InitThread(void* pData)
 		// Disable global interrupt
 		OS_DisableInterrupts();
 
-		OS_SemaphoreWait(InitSemaphore, 0);
+		//(void)OS_SemaphoreWait(InitSemaphore, 0);
 		// Initialise Packet
 		bool packInit = Packet_Init(BAUD_RATE, CPU_BUS_CLK_HZ);
 
-//		OS_ThreadCreate(PacketThread, NULL, &PacketThreadStack[THREAD_STACK_SIZE-1],10);
-//	  OS_ThreadCreate(TxUARTThread, NULL, &TxUARTThreadStack[THREAD_STACK_SIZE-1],4);
-//	  OS_ThreadCreate(RxUARTThread, NULL, &RxUARTThreadStack[THREAD_STACK_SIZE-1],2);
+		// Create semaphores
+		OS_ThreadCreate(PacketThread, NULL, &PacketThreadStack[THREAD_STACK_SIZE-1],6);
+	  OS_ThreadCreate(PITThread, NULL, &PITThreadStack[THREAD_STACK_SIZE-1],2);
+	  OS_ThreadCreate(FTMThread, NULL, &FTMThreadStack[THREAD_STACK_SIZE-1],1);
+
 
 		// Initialise LEDs
 		bool LEDsInit = LEDs_Init();
@@ -358,7 +484,7 @@ static void InitThread(void* pData)
 		PIT_Enable(true);			// Starts  PIT0
 
 		// Initialise RTC
-		//RTC_Init(&RTCCallback, NULL);
+		RTC_Init();
 
 		// Initialise FTM
 		FTM_Init();
@@ -384,14 +510,14 @@ static void InitThread(void* pData)
 			}
 		}
 
-		// Enable global interrupt
-		OS_EnableInterrupts();
-
 		// Makes the Packet_Processor function execute "0x04 Special - Get startup values" on startup
 		Packet_Command = CMD_SGET_STARTUP;
 		PacketProcessor();
-		// COMMENT
-		//(void)OS_SemaphoreSignal(MainSemaphore);
+
+		// Enable global interrupt
+		OS_EnableInterrupts();
+
+		(void)OS_SemaphoreSignal(MainSemaphore);
 		OS_ThreadDelete(0);
 	}
 }
@@ -399,31 +525,14 @@ static void InitThread(void* pData)
 // MainThread
 static void MainThread(void* pData)
 {
-	(void)OS_SemaphoreWait(MainSemaphore, 0);
+
   for (;;)
   {
-
-//  	OS_DisableInterrupts();
-//  	// If a valid packet is received
-//    if (Packet_Get())
-//    {
-//    	LEDs_On(LED_BLUE);
-//    	FTM_StartTimer(&FTMChannel0); // Start timer for output compare
-//    	PacketProcessor(); //Handle packet according to the command byte
-//    }
-//
-//    OS_EnableInterrupts();
-
-    // Polling method for asynchronous mode
-//    if ((modeAccel == ACCEL_POLL) && pollI2C)
-//    {
-//    	FTM_StartTimer(&FTMChannel1); // Start timer for accelerometer
-//    	HandleAccelPollRead(); // Poll I2C
-//    	pollI2C = false; // Wait for next poll
-//    }
+  	(void)OS_SemaphoreWait(MainSemaphore, 0);
+//  	ACCEL STUFF
 
     (void)OS_SemaphoreSignal(MainSemaphore);
-    (void)OS_SemaphoreSignal(PacketSemaphore);
+
 
   }
 }
@@ -448,23 +557,17 @@ int main(void)
   // Initialise RTOS
   OS_Init(CPU_CORE_CLK_HZ, true);
 
-  // RTCSemaphore = OS_SemaphoreCreate(1); TODO: add this in later
-  //MainSemaphore = OS_SemaphoreCreate(1);
-  InitSemaphore = OS_SemaphoreCreate(1);
+  // Create semaphores
+  MainSemaphore = OS_SemaphoreCreate(1);
+  InitSemaphore = OS_SemaphoreCreate(0);
+	RTCSemaphore = OS_SemaphoreCreate(1);
+	PITSemaphore = OS_SemaphoreCreate(1);
+	FTMSemaphore = OS_SemaphoreCreate(1);
 
-
-
-
-  // TODO: error = OS_ThreadCreate(RTCThread, NULL, &RTCThreadStack[THREAD_STACK_SIZE-1],8);
-  //error = OS_ThreadCreate(MainThread, NULL, &MainThreadStack[THREAD_STACK_SIZE-1],16);
+	// Create first set of threads
+  error = OS_ThreadCreate(MainThread, NULL, &MainThreadStack[THREAD_STACK_SIZE-1],10);
   error = OS_ThreadCreate(InitThread, NULL, &InitThreadStack[THREAD_STACK_SIZE-1],0);
-
-  // TODO: Everything from this line onward is new
-  error = OS_ThreadCreate(RxUARTThread, NULL, &RxUARTThreadStack[THREAD_STACK_SIZE-1],3);
-  error = OS_ThreadCreate(TxUARTThread, NULL, &TxUARTThreadStack[THREAD_STACK_SIZE-1],4);
-  error = OS_ThreadCreate(PacketThread, NULL, &PacketThreadStack[THREAD_STACK_SIZE-1],5);
-  error = OS_ThreadCreate(PITThread, NULL, &PITThreadStack[THREAD_STACK_SIZE-1],2);
-
+  error = OS_ThreadCreate(RTCThread, NULL, &RTCThreadStack[THREAD_STACK_SIZE-1],4);
 
   OS_Start();
 

@@ -14,17 +14,15 @@
 
 #include "RTC.h"
 #include "MK70F12.h"
+#include "OS.h"
 
 // Global Variables
-static void (*RTCCallback)(void*); // User callback function pointer
-static void* RTCArguments; // User arguments pointer to use with user callback function
 
 
-bool RTC_Init(void (*userFunction)(void*), void* userArguments)
+bool RTC_Init()
 {
 	// Set variable to private global variable
-	RTCCallback = userFunction;
-	RTCArguments = userArguments;
+
 
 	// Enable  RTC SCGC
 	SIM_SCGC6 |= SIM_SCGC6_RTC_MASK;
@@ -46,7 +44,6 @@ bool RTC_Init(void (*userFunction)(void*), void* userArguments)
 
 	// Enable time seconds interrupt
 	RTC_IER |= RTC_IER_TSIE_MASK;
-
 
 	// Disable unused interrupt
 	RTC_IER &= ~(RTC_IER_TAIE_MASK | RTC_IER_TOIE_MASK | RTC_IER_TIIE_MASK);
@@ -111,9 +108,12 @@ void RTC_Get(uint8_t* const hours, uint8_t* const minutes, uint8_t* const second
 
 void __attribute__ ((interrupt)) RTC_ISR(void)
 {
+	OS_ISREnter();
+
 	// Runs callback method if interrupt requested
-	if (RTCCallback)
-		(*RTCCallback)(RTCArguments);
+	(void)OS_SemaphoreSignal(RTCSemaphore);
+
+	OS_ISRExit();
 }
 
 /*!

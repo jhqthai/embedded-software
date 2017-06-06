@@ -15,10 +15,13 @@
 
 #include "UART.h"
 #include "packet.h"
+#include "MK70F12.h"
 
+
+static uint8_t PacketIndex = 0;
 TPacket Packet;
 const uint8_t PACKET_ACK_MASK = 0x80;
-static uint8_t PacketIndex = 0;
+
 
 /*! @brief Initializes functions of the included modules where necessary.
  *
@@ -29,7 +32,7 @@ static uint8_t PacketIndex = 0;
 bool Packet_Init(const uint32_t baudRate, const uint32_t moduleClk)
 {
 	PacketSemaphore = OS_SemaphoreCreate(0);
-	PacketPutSemaphore = OS_SemaphoreCreate(1);
+	//PacketPutSemaphore = OS_SemaphoreCreate(1);
   return UART_Init(baudRate, moduleClk);
 }
 
@@ -41,60 +44,55 @@ bool Packet_Get(void)
 {
   //Temp variable to store UART input
   uint8_t uartStore;
-
   //If UART receives a character, store in uartStore
-  UART_InChar (&uartStore);
+  while (UART_InChar(&uartStore))
+  {
+  	//Places uartStore in the variable that corresponds to PacketIndex - also increments PacketIndex
+    switch (PacketIndex++)
+    {
+      case 0:
+        Packet_Command = uartStore;
+        break;
+      case 1:
+        Packet_Parameter1 = uartStore;
+        break;
+      case 2:
+        Packet_Parameter2 = uartStore;
+        break;
+      case 3:
+        Packet_Parameter3 = uartStore;
+        break;
+      case 4:
+        Packet_Checksum = uartStore;
 
-//  while (UART_InChar (&uartStore))
-//  {
-		//Places uartStore in the variable that corresponds to PacketIndex - also increments PacketIndex
-		switch (PacketIndex++)
-		{
-			case 0:
-				Packet_Command = uartStore;
-				break;
-			case 1:
-				Packet_Parameter1 = uartStore;
-				break;
-			case 2:
-				Packet_Parameter2 = uartStore;
-				break;
-			case 3:
-				Packet_Parameter3 = uartStore;
-				break;
-			case 4:
-				Packet_Checksum = uartStore;
-
-				//Compares incoming byte with expected checksum
-				if((Packet_Command ^ Packet_Parameter1 ^ Packet_Parameter2 ^ Packet_Parameter3) == Packet_Checksum)
-				{
-					//Valid packet, reset PacketIndex and return true
-					PacketIndex = 0;
+        //Compares incoming byte with expected checksum
+        if((Packet_Command ^ Packet_Parameter1 ^ Packet_Parameter2 ^ Packet_Parameter3) == Packet_Checksum)
+        {
+        	//Valid packet, reset PacketIndex and return true
+          PacketIndex = 0;
 					return true;
-				}
-				else
-				{
-				//Invalid packet, discard the 1st byte, and shift everything down 1 byte
-				Packet_Command = Packet_Parameter1;
-				Packet_Parameter1 = Packet_Parameter2;
-				Packet_Parameter2 = Packet_Parameter3;
-				Packet_Parameter3 = Packet_Checksum;
-				PacketIndex = 4;
-				return false;
-				}
-				break;
-		}
-//  }
+        }
+        else
+        {
+        //Invalid packet, discard the 1st byte, and shift everything down 1 byte
+        Packet_Command = Packet_Parameter1;
+        Packet_Parameter1 = Packet_Parameter2;
+        Packet_Parameter2 = Packet_Parameter3;
+        Packet_Parameter3 = Packet_Checksum;
+        PacketIndex = 4;
+        return false;
+        }
+        break;
+    }
+  }
   return false;
 }
-
-
 
 //Given command and three parameter bytes, gets checksum and attempts to send a packet
 bool Packet_Put (const uint8_t command, const uint8_t parameter1, const uint8_t parameter2, const uint8_t parameter3)
 {
 	// Obtain exclusive access to packet put
-	OS_SemaphoreWait(PacketPutSemaphore, 0);
+	//OS_SemaphoreWait(PacketPutSemaphore, 0);
 
   //Calculates checksum from command and parameters and sends all to FIFO
 	bool success = (UART_OutChar(command)
@@ -103,11 +101,12 @@ bool Packet_Put (const uint8_t command, const uint8_t parameter1, const uint8_t 
 	    && UART_OutChar(parameter3)
 	    && UART_OutChar(command ^ parameter1 ^ parameter2 ^ parameter3));
 
-	// Relinquish exclusive access to packet put
-	OS_SemaphoreSignal(PacketPutSemaphore);
+	// Enable transmit interrupt flag
+	UART2_C2 |= UART_C2_TIE_MASK;
 
 	return success;
 }
+
 
 /*!
 ** @}

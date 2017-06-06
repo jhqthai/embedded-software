@@ -18,7 +18,6 @@
 #include "UART.h"
 #include "MK70F12.h"
 #include "CPU.h"
-#include "OS.h"
 #include "Packet.h"
 
 
@@ -28,10 +27,6 @@ static TFIFO TxFIFO;
 
 bool UART_Init(const uint32_t baudRate, const uint32_t moduleClk)
 {
-	// Initialise semaphore to 0 for multiple events occurrence
-  TxSemaphore = OS_SemaphoreCreate(0);
-  RxSemaphore = OS_SemaphoreCreate(0);
-
   //Enable UART2 Module
 	SIM_SCGC4 |= SIM_SCGC4_UART2_MASK;
   //Enable PORT E pin routing
@@ -96,76 +91,40 @@ bool UART_Init(const uint32_t baudRate, const uint32_t moduleClk)
 
 bool UART_InChar(uint8_t * const dataPtr)
 {
-  return FIFO_Get(&RxFIFO, dataPtr); // Store incoming byte in variable
+  return (FIFO_Get(&RxFIFO, dataPtr)); // Store incoming byte in variable
 }
 
 
 bool UART_OutChar(const uint8_t data)
 {
-  return (FIFO_Put(&TxFIFO, data));
+  return (FIFO_Put(&TxFIFO, data)); // Data successfully written into FIFO
 }
-
-
-void RxUARTThread(void* arg)
-{
-	for(;;)
-	{
-		// Wait to receive
-		OS_SemaphoreWait(RxSemaphore, 0);
-
-		// Write to UART2 data register
-		FIFO_Put(&RxFIFO, UART2_D);
-
-		// Signal packet semaphore indicate packet_init ready
-		//OS_SemaphoreSignal(PacketSemaphore);
-
-		// Enable receiver interrupt mask
-		UART2_C2 |= UART_C2_RIE_MASK;
-	}
-}
-
-void TxUARTThread(void* arg)
-{
-	for(;;)
-	{
-		// Wait for transmit signal
-		OS_SemaphoreWait(TxSemaphore, 0);
-
-		// Get data from UART2 data register to transmit
-		FIFO_Get(&TxFIFO, &UART2_D);
-
-		// Enable transmit interrupt mask
-		UART2_C2 |= UART_C2_TIE_MASK;
-	}
-}
-
-
 
 void __attribute__ ((interrupt)) UART_ISR (void)
 {
 	OS_ISREnter();
 
-	// Clear RDRF flag by reading the status register
-	if (UART2_S1 & UART_S1_RDRF_MASK)
-	{
-		// Signal RxUARTThread ready
-		OS_SemaphoreSignal(RxSemaphore);
-
-		// Disable receiver interrupt mask before writing in RxUARTThread
-		UART2_C2 &= ~UART_C2_RIE_MASK;
-	}
 	// Clear TDRE flag by reading the status register
-	if (UART2_S1 & UART_S1_TDRE_MASK)
+	if(UART2_S1 & UART_S1_TDRE_MASK)
 	{
-		// Signal TxUARTThread ready
-		OS_SemaphoreSignal(TxSemaphore);
-
-		// Disable receiver mask before writing in TxUARTThread
-		UART2_C2 &= ~UART_C2_TIE_MASK;
+		if (!(FIFO_Get(&TxFIFO, &UART2_D)))
+			UART2_C2 &= ~UART_C2_TIE_MASK; //Clears Interrupt
 	}
+
+	if(UART2_C2 & UART_C2_RIE_MASK) //Read for this is cause from PC
+	{
+		// Clear RDRF flag by reading the status register
+		if (UART2_S1 & UART_S1_RDRF_MASK)
+		{
+			FIFO_Put(&RxFIFO, UART2_D);
+
+			// Signal packet semaphore
+			OS_SemaphoreSignal(PacketSemaphore);
+		}
+	}
+
 	OS_ISRExit();
 }
-
 /*!
 ** @}
 */

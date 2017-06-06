@@ -19,6 +19,11 @@
 
 // new types
 #include "types.h"
+#include "OS.h"
+
+
+OS_ECB *RTCSemaphore;		/*!< Binary semaphore for RTC thread */
+
 
 /*! @brief Initializes the RTC before first use.
  *
@@ -28,7 +33,7 @@
  *  @param userArguments is a pointer to the user arguments to use with the user callback function.
  *  @return bool - TRUE if the RTC was successfully initialized.
  */
-bool RTC_Init(void (*userFunction)(void*), void* userArguments);
+bool RTC_Init(void);
 
 /*! @brief Sets the value of the real time clock.
  *

@@ -20,8 +20,8 @@
 // New types
 #include "types.h"
 
-OS_ECB *PacketPutSemaphore;		/*!< Binary semaphore for Packet Put */
-OS_ECB *PacketSemaphore;		/*!< Binary semaphore for Packet Init */
+OS_ECB *PacketSemaphore;
+OS_ECB *PacketPutSemaphore;
 
 // Packet structure
 #define PACKET_NB_BYTES 5
