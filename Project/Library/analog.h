@@ -25,8 +25,6 @@
 
 typedef struct
 {
-  int16union_t value;                  /*!< The current "processed" analog value (the user updates this value). */
-  int16union_t oldValue;               /*!< The previous "processed" analog value (the user updates this value). */
   int16_t values[ANALOG_WINDOW_SIZE];  /*!< An array of sample values to create a "sliding window". */
   int16_t* putPtr;                     /*!< A pointer into the array of the last sample taken. */
 } TAnalogInput;

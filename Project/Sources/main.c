@@ -42,10 +42,16 @@
 #include "LEDs.h"
 #include "Flash.h"
 #include "FTM.h"
+#include "PIT.h"
+#include "math.h"
 
 // Global variables
 static uint16union_t volatile *NvTowerNb;
 static uint16union_t volatile *NvTowerMd;
+
+// Array to store analog window data
+//static TAnalogInput AnalogData[ANALOG_WINDOW_SIZE];
+TAnalogInput AnalogInput;
 
 // Defining constants
 #define CMD_SGET_STARTUP 0x04
@@ -54,33 +60,55 @@ static uint16union_t volatile *NvTowerMd;
 #define CMD_TOWER_MODE 0x0D
 #define CMD_FPROGRAM_BYTE 0x07
 #define CMD_FREAD_BYTE 0x08
-#define CMD_SET_TIME 0x0C
-#define CMD_ACCEL_VAL 0x10
-#define CMD_PROTO_MODE 0x0A
+#define CMD_CHASTIC 0x01
+
 static const uint32_t BAUD_RATE  = 115200;
+
+// define characteristic types
+typedef enum
+{
+  INVERSE,
+  VINVERSE,
+  EINVERSE
+}
+Characteristic_t ;
+Characteristic_t Chastic;
+
+//// Characteristic constants
+//static const double INVERSE_K = 0.14;
+//static const double INVERSE_A = 0.02;
+//static const double VINVERSE_K = 13.5;
+//static const uint8_t VINVERSE_A = 1;
+//static const uint8_t EINVERSE_K = 80;
+//static const uint8_t EINVERSE_A = 2;
 
 // Initialises PacketProcessor
 bool PacketProcessor(void);
+
+// Initilise RMS Filter
+static double RMSFilter (int16_t *values, uint8_t n);
+
 
 // ----------------------------------------
 // Thread set up
 // ----------------------------------------
 // Arbitrary thread stack size - big enough for stacking of interrupts and OS use.
 #define THREAD_STACK_SIZE 100
-#define NB_ANALOG_CHANNELS 2
+#define NB_ANALOG_CHANNELS 3
 
 // Thread stacks
 OS_THREAD_STACK(InitModulesThreadStack, THREAD_STACK_SIZE); /*!< The stack for the LED Init thread. */
 static uint32_t AnalogThreadStacks[NB_ANALOG_CHANNELS][THREAD_STACK_SIZE] __attribute__ ((aligned(0x08)));
 static uint32_t FTMThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08))); /*!< The stack for the FTM thread. */
 static uint32_t PacketThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08))); /*!< The stack for the packet thread. */
+static uint32_t PITThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08))); /*!< The stack for the PIT thread. */
 
 
 // ----------------------------------------
 // Thread priorities
 // 0 = highest priority
 // ----------------------------------------
-const uint8_t ANALOG_THREAD_PRIORITIES[NB_ANALOG_CHANNELS] = {1, 2};
+const uint8_t ANALOG_THREAD_PRIORITIES[NB_ANALOG_CHANNELS] = {1, 2, 3};
 
 /*! @brief Data structure used to pass Analog configuration to a user thread
  *
@@ -89,6 +117,8 @@ typedef struct AnalogThreadData
 {
   OS_ECB* semaphore;
   uint8_t channelNb;
+  int16_t values[ANALOG_WINDOW_SIZE];  /*!< An array of sample values to create a "sliding window". */
+  double  irms;
 } TAnalogThreadData;
 
 /*! @brief Analog thread configuration data
@@ -98,11 +128,21 @@ static TAnalogThreadData AnalogThreadData[NB_ANALOG_CHANNELS] =
 {
   {
     .semaphore = NULL,
-    .channelNb = 0
+    .channelNb = 0,
+    .values[0] = 0,
+    .irms = 0.0
   },
   {
     .semaphore = NULL,
-    .channelNb = 1
+    .channelNb = 1,
+    .values[0] = 0,
+    .irms = 0.0
+  },
+  {
+    .semaphore = NULL,
+    .channelNb = 2,
+    .values[0] = 0,
+    .irms = 0.0
   }
 };
 
@@ -120,54 +160,6 @@ static TFTMChannel FTMChannel0 =
 };
 
 
-void LPTMRInit(const uint16_t count)
-{
-  // Enable clock gate to LPTMR module
-  SIM_SCGC5 |= SIM_SCGC5_LPTIMER_MASK;
-
-  // Disable the LPTMR while we set up
-  // This also clears the CSR[TCF] bit which indicates a pending interrupt
-  LPTMR0_CSR &= ~LPTMR_CSR_TEN_MASK;
-
-  // Enable LPTMR interrupts
-  LPTMR0_CSR |= LPTMR_CSR_TIE_MASK;
-  // Reset the LPTMR free running counter whenever the 'counter' equals 'compare'
-  LPTMR0_CSR &= ~LPTMR_CSR_TFC_MASK;
-  // Set the LPTMR as a timer rather than a counter
-  LPTMR0_CSR &= ~LPTMR_CSR_TMS_MASK;
-
-  // Bypass the prescaler
-  LPTMR0_PSR |= LPTMR_PSR_PBYP_MASK;
-  // Select the prescaler clock source
-  LPTMR0_PSR = (LPTMR0_PSR & ~LPTMR_PSR_PCS(0x3)) | LPTMR_PSR_PCS(1);
-
-  // Set compare value
-  LPTMR0_CMR = LPTMR_CMR_COMPARE(count);
-
-  // Initialize NVIC
-  // see p. 91 of K70P256M150SF3RM.pdf
-  // Vector 0x65=101, IRQ=85
-  // NVIC non-IPR=2 IPR=21
-  // Clear any pending interrupts on LPTMR
-  NVICICPR2 = NVIC_ICPR_CLRPEND(1 << 21);
-  // Enable interrupts from LPTMR module
-  NVICISER2 = NVIC_ISER_SETENA(1 << 21);
-
-  //Turn on LPTMR and start counting
-  LPTMR0_CSR |= LPTMR_CSR_TEN_MASK;
-}
-
-void __attribute__ ((interrupt)) LPTimer_ISR(void)
-{
-  // Clear interrupt flag
-  LPTMR0_CSR |= LPTMR_CSR_TCF_MASK;
-
-  // Signal the analog channels to take a sample
-  for (uint8_t analogNb = 0; analogNb < NB_ANALOG_CHANNELS; analogNb++)
-    (void)OS_SemaphoreSignal(AnalogThreadData[analogNb].semaphore);
-}
-
-
 /*! @brief Initialises modules.
  *
  */
@@ -180,8 +172,6 @@ static void InitModulesThread(void* pData)
   for (uint8_t analogNb = 0; analogNb < NB_ANALOG_CHANNELS; analogNb++)
     AnalogThreadData[analogNb].semaphore = OS_SemaphoreCreate(0);
 
-  // Initialise the low power timer to tick every 10 ms
-  LPTMRInit(10);
 
   // Initialise Packet
   Packet_Init(BAUD_RATE, CPU_BUS_CLK_HZ);
@@ -194,6 +184,12 @@ static void InitModulesThread(void* pData)
 
   // Initialise FTM
   FTM_Init();
+
+  // Initialise PIT
+  PIT_Init(CPU_BUS_CLK_HZ);
+  PIT_Set(1.25e6,false); // Sets PIT0 to interrupts every half second (1/50HZ/16 samples)
+  PIT_Enable(true);     // Starts  PIT0
+
 
   // Allocate flash addresses for tower number and mode
   bool allocTowerNB = Flash_AllocateVar((void*)&NvTowerNb, sizeof(*NvTowerNb));
@@ -226,16 +222,105 @@ void AnalogLoopbackThread(void* pData)
 {
   // Make the code easier to read by giving a name to the typecast'ed pointer
   #define analogData ((TAnalogThreadData*)pData)
+  static uint8_t counter = 0;
 
   for (;;)
   {
     int16_t analogInputValue;
 
     (void)OS_SemaphoreWait(analogData->semaphore, 0);
-    // Get analog sample
     Analog_Get(analogData->channelNb, &analogInputValue);
-    // Put analog sample
+
+    if (counter < ANALOG_WINDOW_SIZE)
+    {
+      analogData->values[counter] = analogInputValue;
+      counter++;
+    }
+    else
+    {
+      counter = 0;
+      analogData->values[counter] = analogInputValue;
+      analogData->irms = RMSFilter(analogData->values, ANALOG_WINDOW_SIZE);
+    }
+
+//    //TODO: Maybe should have an output signal thread
+//    // Timing output signal
+//    if (analogData->irms < 1.03)
+//      // 0V output signal on channel1
+//      Analog_Put(0, 0);
+//    else
+//      // 5V output signal on channel1
+//      Analog_Put(0, 5);
+//
+      //TODO: Check how to know if thread is idle or active
+//    // Trip output signal
+//    if () //thread idle
+//      // 0V output signal on channel2
+//      Analog_Put(0, 1);
+//    else //thread active
+//      // 5V output signal on channel2
+//      Analog_Put(0, 5);
+
+    // Put analog sample TODO: Display rms calculation
     Analog_Put(analogData->channelNb, analogInputValue);
+  }
+}
+
+// TODO: Calculation of RMS
+static double RMSFilter (int16_t *values, uint8_t n)
+{
+  int i;
+  uint16_t sum = 0;
+  for (i =0; i < n; i++)
+    sum += values[i] * values[i];
+  double vrms = (double)sum/ n;
+  double irms = vrms/0.35;
+  return (irms);
+}
+
+// TODO: How to pass irms into this function?
+static void IDMTCalulate (double irms, Characteristic_t chastic)
+{
+  double t;
+//  if (irms >= 1.03)
+    switch (chastic)
+    {
+      case (INVERSE):
+        // Calculation
+        t = 0.14 / (pow(irms, 0.02) - 1);
+        break;
+
+      case (VINVERSE):
+        t = 13.5/(irms - 1);
+        break;
+
+      case (EINVERSE):
+        t = 80/((irms * irms) - 1);
+        break;
+    }
+//    else
+//      t = infinity?;
+}
+
+/*! @brief PIT interrupt user thread
+ *
+ *  Confirm interrupt occurred
+ *  Signal the analog channels to take a sample
+ *  Toggle green LED
+ *  @return void
+ */
+static void PITThread(void* pData)
+{
+  for (;;)
+  {
+    OS_SemaphoreWait(PITSemaphore, 0);
+
+    // Signal the analog channels to take a sample
+    for (uint8_t analogNb = 0; analogNb < NB_ANALOG_CHANNELS; analogNb++)
+      (void)OS_SemaphoreSignal(AnalogThreadData[analogNb].semaphore);
+
+    // Toggles green LED
+    LEDs_Toggle(LED_GREEN);
   }
 }
 
@@ -294,21 +379,27 @@ int main(void)
                           &InitModulesThreadStack[THREAD_STACK_SIZE - 1],
                           0); // Highest priority
 
-  // Create threads for 2 analog loopback channels
-  for (uint8_t threadNb = 0; threadNb < NB_ANALOG_CHANNELS; threadNb++)
-  {
-    error = OS_ThreadCreate(AnalogLoopbackThread,
-                            &AnalogThreadData[threadNb],
-                            &AnalogThreadStacks[threadNb][THREAD_STACK_SIZE - 1],
-                            ANALOG_THREAD_PRIORITIES[threadNb]);
-  }
+  // Create threads for 3 analog loopback channels
+//  for (uint8_t threadNb = 0; threadNb < NB_ANALOG_CHANNELS; threadNb++)
+//  {
+//    error = OS_ThreadCreate(AnalogLoopbackThread,
+//                            &AnalogThreadData[threadNb],
+//                            &AnalogThreadStacks[threadNb][THREAD_STACK_SIZE - 1],
+//                            ANALOG_THREAD_PRIORITIES[threadNb]);
+//  }
+  error = OS_ThreadCreate(AnalogLoopbackThread,
+                              &AnalogThreadData[0],
+                              &AnalogThreadStacks[0][THREAD_STACK_SIZE - 1],
+                              ANALOG_THREAD_PRIORITIES[0]);
 
   // Create thread for packet handler
   OS_ThreadCreate(PacketThread, NULL, &PacketThreadStack[THREAD_STACK_SIZE-1],8);
 
   // Create thread for FTM
-  OS_ThreadCreate(FTMThread, NULL, &FTMThreadStack[THREAD_STACK_SIZE-1],4);
+  OS_ThreadCreate(FTMThread, NULL, &FTMThreadStack[THREAD_STACK_SIZE-1],5);
 
+  // Create thread for PIT
+  OS_ThreadCreate(PITThread, NULL, &PITThreadStack[THREAD_STACK_SIZE-1],4);
 
   // Start multithreading - never returns!
   OS_Start();
@@ -420,6 +511,36 @@ bool PacketProcessor(void)
       else
         success = false;
         break;
+
+    case CMD_CHASTIC:
+      // Get characteristic
+      if ((Packet_Parameter1 == 0x00) & (Packet_Parameter2 == 0x01))
+        // TODO: DO THIS characteristic get
+        //success = Packet_Put(CMD_TOWER_MODE, 0x01, NvTowerMd->s.Lo, NvTowerMd->s.Hi);
+
+
+      // Set characteristic for IDMT calculation perform
+      if ((Packet_Parameter1 == 0x00) & (Packet_Parameter2 == 0x02))
+      {
+        // Inverse
+        if (Packet_Parameter3 == 0x01)
+          Chastic = INVERSE;
+        // Very Inverse
+        else if (Packet_Parameter3 == 0x02)
+          Chastic = VINVERSE;
+        // Extremely Inverse
+        else if (Packet_Parameter3 == 0x03)
+          Chastic = EINVERSE;
+
+        // Call function to calculate timing
+        IDMTCalulate(Chastic);
+
+        // TODO: Set characteristic into flash
+        //success =  Flash_Write16((uint16_t*)NvTowerMd, Packet_Parameter23);
+
+      }
+
+
   }
   // Check if packet acknowledgment enabled
   if ((Packet_Command >= PACKET_ACK_MASK))
