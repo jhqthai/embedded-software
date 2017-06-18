@@ -42,7 +42,7 @@ bool PIT_Init(const uint32_t moduleClk)
 	PIT_MCR |= PIT_MCR_FRZ_MASK;
 	
 	// Enable Timer0
-	PIT_Enable(true);
+	PIT0_Enable(true);
 
 	// Enable Timer0 interrupt
 	PIT_TCTRL0 = PIT_TCTRL_TIE_MASK;
@@ -61,7 +61,7 @@ bool PIT_Init(const uint32_t moduleClk)
 }
 
 
-void PIT_Set(const uint32_t period, const bool restart)
+void PIT0_Set(const uint32_t period, const bool restart)
 {
 	// Clock period (ns) = 1/module clock rate (MHZ)
 	uint32_t periodClk = 1e9/PITModuleClk;
@@ -73,16 +73,16 @@ void PIT_Set(const uint32_t period, const bool restart)
 	// If restart true, disable pit and set up timer as per spec
 	if (restart)
 	{
-		PIT_Enable(false);
+		PIT0_Enable(false);
 		PIT_LDVAL0 = PIT_LDVAL_TSV(triggerLDVAL); // Set up timer for triggerLDVAL clock cycles
-		PIT_Enable(true);
+		PIT0_Enable(true);
 	}
 	else
 		PIT_LDVAL0 = PIT_LDVAL_TSV(triggerLDVAL);
 }
 
 
-void PIT_Enable(const bool enable)
+void PIT0_Enable(const bool enable)
 {
 	if (enable)
 		PIT_TCTRL0 |= PIT_TCTRL_TEN_MASK; // Start timer0
@@ -91,7 +91,7 @@ void PIT_Enable(const bool enable)
 }
 
 
-void __attribute__ ((interrupt)) PIT_ISR(void)
+void __attribute__ ((interrupt)) PIT0_ISR(void)
 {
 	OS_ISREnter();
 

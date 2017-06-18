@@ -187,8 +187,8 @@ static void InitModulesThread(void* pData)
 
   // Initialise PIT
   PIT_Init(CPU_BUS_CLK_HZ);
-  PIT_Set(1.25e6,false); // Sets PIT0 to interrupts every half second (1/50HZ/16 samples)
-  PIT_Enable(true);     // Starts  PIT0
+  PIT0_Set(1.25e6,false); // Sets PIT0 to interrupts every 1.25ms (1/50HZ/16 samples)
+  PIT0_Enable(true);     // Starts  PIT0
 
 
   // Allocate flash addresses for tower number and mode
