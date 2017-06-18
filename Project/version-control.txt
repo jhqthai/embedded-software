@@ -1,0 +1,28 @@
+Stored 16 samples in array
+Calculated VRMS
+Modified PIT0
+Added PIT1
+
+
+
+Todo:
+Configure PIT1 for characteristic timing
+
+
+
+
+Notes:
+take in values
+save in array (sliding window)
+
+topic note 10
+look at curve after rms
+
+consider ticks
+
+sample clock
+and timeout clock
+
+tips: use pit 2 clocks
+
+command characteristic curve

@@ -86,7 +86,9 @@ Characteristic_t Chastic;
 bool PacketProcessor(void);
 
 // Initilise RMS Filter
-static double RMSFilter (int16_t *values, uint8_t n);
+double RMSFilter (int16_t *values, uint8_t n);
+double IDMTCalulate (double irms);
+
 
 
 // ----------------------------------------
@@ -101,7 +103,8 @@ OS_THREAD_STACK(InitModulesThreadStack, THREAD_STACK_SIZE); /*!< The stack for t
 static uint32_t AnalogThreadStacks[NB_ANALOG_CHANNELS][THREAD_STACK_SIZE] __attribute__ ((aligned(0x08)));
 static uint32_t FTMThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08))); /*!< The stack for the FTM thread. */
 static uint32_t PacketThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08))); /*!< The stack for the packet thread. */
-static uint32_t PITThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08))); /*!< The stack for the PIT thread. */
+static uint32_t PIT0ThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08))); /*!< The stack for the PIT0 thread. */
+static uint32_t PIT1ThreadStack[THREAD_STACK_SIZE] __attribute__ ((aligned(0x08))); /*!< The stack for the PIT1 thread. */
 
 
 // ----------------------------------------
@@ -118,7 +121,8 @@ typedef struct AnalogThreadData
   OS_ECB* semaphore;
   uint8_t channelNb;
   int16_t values[ANALOG_WINDOW_SIZE];  /*!< An array of sample values to create a "sliding window". */
-  double  irms;
+  double irms;
+  double tripTime;
 } TAnalogThreadData;
 
 /*! @brief Analog thread configuration data
@@ -130,19 +134,22 @@ static TAnalogThreadData AnalogThreadData[NB_ANALOG_CHANNELS] =
     .semaphore = NULL,
     .channelNb = 0,
     .values[0] = 0,
-    .irms = 0.0
+    .irms = 0.0,
+    .tripTime = 0.0
   },
   {
     .semaphore = NULL,
     .channelNb = 1,
     .values[0] = 0,
-    .irms = 0.0
+    .irms = 0.0,
+    .tripTime = 0.0
   },
   {
     .semaphore = NULL,
     .channelNb = 2,
     .values[0] = 0,
-    .irms = 0.0
+    .irms = 0.0,
+    .tripTime = 0.0
   }
 };
 
@@ -187,8 +194,8 @@ static void InitModulesThread(void* pData)
 
   // Initialise PIT
   PIT_Init(CPU_BUS_CLK_HZ);
-  PIT0_Set(1.25e6,false); // Sets PIT0 to interrupts every 1.25ms (1/50HZ/16 samples)
-  PIT0_Enable(true);     // Starts  PIT0
+  PIT0_Set(1.25e6,true); // Sets PIT0 to interrupts every 1.25ms (1/50HZ/16 samples)
+//  PIT0_Enable(true);     // Starts  PIT0
 
 
   // Allocate flash addresses for tower number and mode
@@ -223,6 +230,7 @@ void AnalogLoopbackThread(void* pData)
   // Make the code easier to read by giving a name to the typecast'ed pointer
   #define analogData ((TAnalogThreadData*)pData)
   static uint8_t counter = 0;
+//  bool tripped = false;
 
   for (;;)
   {
@@ -231,6 +239,9 @@ void AnalogLoopbackThread(void* pData)
     (void)OS_SemaphoreWait(analogData->semaphore, 0);
     Analog_Get(analogData->channelNb, &analogInputValue);
 
+    // Put analog sample TODO: Display rms calculation
+//    Analog_Put(analogData->channelNb, analogInputValue);
+
     if (counter < ANALOG_WINDOW_SIZE)
     {
       analogData->values[counter] = analogInputValue;
@@ -238,52 +249,89 @@ void AnalogLoopbackThread(void* pData)
     }
     else
     {
+      analogData->irms = RMSFilter(analogData->values, ANALOG_WINDOW_SIZE);
       counter = 0;
       analogData->values[counter] = analogInputValue;
-      analogData->irms = RMSFilter(analogData->values, ANALOG_WINDOW_SIZE);
+
+      // Check if require tripping
+      if (analogData->irms < (1.03*3000) ) // Does not require tripping
+      {
+        //Set timing output signal to 0V on output channel1
+        Analog_Put(0, 0);
+
+        // Set output signal to 0V (IDLE) on output channel2
+//        Analog_Put(1, 0);
+      }
+
+      else // Irms > 1.03 then require tripping
+      {
+        //Set timing output signal to 5V on output channel1
+        Analog_Put(0, 5*3000);
+        // TODO: Set output signal to Active before trip (might be wrong here)
+//        Analog_Put(1, 5*3000);
+
+        // Calculate IDMT
+        analogData->tripTime = IDMTCalulate(analogData->irms);
+
+		//TODO: PUT THIS in global
+		bool newvalue = true;
+		
+        // TODO: Configure PIT1 here
+		if (newvalue)
+          PIT1_Set(analogData->tripTime,true);
+		  NEWVAL = false;
+		else
+		  PIT1_Set(analogData->tripTime, false);
+
+
+
+        // TODO:Set output signal to 5V (ACTIVE)
+//        Analog_Put(analogData->channelNb, 15000);
+      }
     }
 
-//    //TODO: Maybe should have an output signal thread
-//    // Timing output signal
-//    if (analogData->irms < 1.03)
-//      // 0V output signal on channel1
-//      Analog_Put(0, 0);
-//    else
-//      // 5V output signal on channel1
-//      Analog_Put(0, 5);
-//
-      //TODO: Check how to know if thread is idle or active
-//    // Trip output signal
-//    if () //thread idle
-//      // 0V output signal on channel2
-//      Analog_Put(0, 1);
-//    else //thread active
-//      // 5V output signal on channel2
-//      Analog_Put(0, 5);
 
-    // Put analog sample TODO: Display rms calculation
-    Analog_Put(analogData->channelNb, analogInputValue);
   }
 }
 
 // TODO: Calculation of RMS
-static double RMSFilter (int16_t *values, uint8_t n)
+double RMSFilter (int16_t *values, uint8_t n)
 {
-  int i;
-  uint16_t sum = 0;
+  uint8_t i;
+  uint16_t vrsm;
+  uint32_t sum = 0;
   for (i =0; i < n; i++)
     sum += values[i] * values[i];
-  double vrms = (double)sum/ n;
-  double irms = vrms/0.35;
+  sum >>= 4; // Divide by 16
+  
+  uint32_t start = 0;
+  uint32_t end = sum;
+  uint32_t mid = (start + end)>>1;
+
+  mid = (start - end)>>1 + start;
+  for (i = 0; i < n*2; i++)
+  {
+	if (mid * mid > sum) 
+	  end = mid;
+	else
+	  start = mid;
+	mid = (start+end)>>1;
+  }
+  vrms = mid;
+  
+//  double vrms = (double)sum/ n;
+//  double irms = vrms/0.35;
   return (irms);
 }
 
-// TODO: How to pass irms into this function?
-static void IDMTCalulate (double irms, Characteristic_t chastic)
+// Calculate time till trip
+// Set output signal to 5V when tripped
+double IDMTCalulate (double irms)
 {
   double t;
-//  if (irms >= 1.03)
-    switch (chastic)
+  // TODO: TEST
+  Chastic = EINVERSE;
+    switch (Chastic)
     {
       case (INVERSE):
         // Calculation
@@ -298,22 +346,25 @@ static void IDMTCalulate (double irms, Characteristic_t chastic)
         t = 80/((irms * irms) - 1);
         break;
     }
-//    else
-//      t = infinity?;
+    return t;
+
+    // Signal PIT1 for count till trip
+//    OS_SignalSemaphore
+
 }
 
-/*! @brief PIT interrupt user thread
+/*! @brief PIT0 thread
  *
- *  Confirm interrupt occurred
  *  Signal the analog channels to take a sample
+ *  Confirm interrupt occurred
  *  Toggle green LED
  *  @return void
  */
-static void PITThread(void* pData)
+static void PIT0Thread(void* pData)
 {
   for (;;)
   {
-    OS_SemaphoreWait(PITSemaphore, 0);
+    OS_SemaphoreWait(PIT0Semaphore, 0);
 
     // Signal the analog channels to take a sample
     for (uint8_t analogNb = 0; analogNb < NB_ANALOG_CHANNELS; analogNb++)
@@ -321,6 +372,37 @@ static void PITThread(void* pData)
 
     // Toggles green LED
     LEDs_Toggle(LED_GREEN);
+  }
+}
+
+/*! @brief PIT1 thread
+ *
+ *  Count-down time till trip event
+ *  Toggle yellow LED
+ *  @return void
+ */
+static void PIT1Thread(void* pData)
+{
+  for (;;)
+  {
+    OS_SemaphoreWait(PIT1Semaphore, 0);
+
+    // TODO:Set output signal to 5V (ACTIVE) on channel2
+//    Analog_Put(1, 15000);
+    
+	// Stop timer1
+    PIT1_Enable(false);
+	
+	// TODO: change this up
+	NEWVALUES = true;
+
+
+//    // Signal the analog channels to take a sample
+//    for (uint8_t analogNb = 0; analogNb < NB_ANALOG_CHANNELS; analogNb++)
+//      (void)OS_SemaphoreSignal(AnalogThreadData[analogNb].semaphore);
+
+    // Toggles green LED
+    LEDs_Toggle(LED_YELLOW);
   }
 }
 
@@ -396,10 +478,13 @@ int main(void)
   OS_ThreadCreate(PacketThread, NULL, &PacketThreadStack[THREAD_STACK_SIZE-1],8);
 
   // Create thread for FTM
-  OS_ThreadCreate(FTMThread, NULL, &FTMThreadStack[THREAD_STACK_SIZE-1],5);
+  OS_ThreadCreate(FTMThread, NULL, &FTMThreadStack[THREAD_STACK_SIZE-1],6);
 
-  // Create thread for PIT
-  OS_ThreadCreate(PITThread, NULL, &PITThreadStack[THREAD_STACK_SIZE-1],4);
+  // Create thread for PIT0
+  OS_ThreadCreate(PIT0Thread, NULL, &PIT0ThreadStack[THREAD_STACK_SIZE-1],4);
+
+  // Create thread for PIT1
+  OS_ThreadCreate(PIT1Thread, NULL, &PIT1ThreadStack[THREAD_STACK_SIZE-1],5);
 
   // Start multithreading - never returns!
   OS_Start();
@@ -518,7 +603,6 @@ bool PacketProcessor(void)
         // TODO: DO THIS characteristic get
         //success = Packet_Put(CMD_TOWER_MODE, 0x01, NvTowerMd->s.Lo, NvTowerMd->s.Hi);
 
-
       // Set characteristic for IDMT calculation perform
       if ((Packet_Parameter1 == 0x00) & (Packet_Parameter2 == 0x02))
       {
@@ -532,8 +616,8 @@ bool PacketProcessor(void)
         else if (Packet_Parameter3 == 0x03)
           Chastic = EINVERSE;
 
-        // Call function to calculate timing
-        IDMTCalulate(Chastic);
+        // Call function to calculate timing TODO: Fix this up later for 3 channels
+//        IDMTCalulate(AnalogThreadData[0].irms, Chastic);
 
         // TODO: Set characteristic into flash
         //success =  Flash_Write16((uint16_t*)NvTowerMd, Packet_Parameter23);

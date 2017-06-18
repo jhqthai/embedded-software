@@ -9,7 +9,7 @@ Sources/main.o: ../Sources/main.c \
  C:\Users\11990405\Desktop\Project\Library/analog.h \
  C:/Users/11990405/Desktop/Project/Sources/types.h ../Sources/FIFO.h \
  ../Sources/types.h ../Sources/UART.h ../Sources/packet.h \
- ../Sources/LEDs.h ../Sources/Flash.h ../Sources/FTM.h
+ ../Sources/LEDs.h ../Sources/Flash.h ../Sources/FTM.h ../Sources/PIT.h
 
 C:/Users/11990405/Desktop/Project/Generated_Code/Cpu.h:
 
@@ -42,3 +42,5 @@ C:/Users/11990405/Desktop/Project/Sources/types.h:
 ../Sources/Flash.h:
 
 ../Sources/FTM.h:
+
+../Sources/PIT.h:

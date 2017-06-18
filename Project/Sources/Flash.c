@@ -200,6 +200,10 @@ bool Flash_Write32(volatile uint32_t* const address, const uint32_t data)
 	uint64union_t phrase;
 	uint64_t *phraseAddress;
 
+  // Checks to make sure word isn't written in an invalid word address
+  if ((uint32_t)address&0x03)
+    return false;
+
 	//Check 3rd last bit of address
 	bool thirdBitAddr = (uint32_t) address&0x04;
 	if (thirdBitAddr)
@@ -233,6 +237,10 @@ bool Flash_Write16(volatile uint16_t* const address, const uint16_t data)
 {
 	uint32union_t word;
 	uint32_t *wordAddress;
+
+  //checks to make sure half-word isnt written in an invalid half-word address
+  if ((uint32_t)address&0x01)
+    return false;
 
 	bool secondBitAddr = (uint32_t) address&0x02;
 

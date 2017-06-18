@@ -6,7 +6,8 @@ Generated_Code/Vectors.o: ../Generated_Code/Vectors.c \
  C:\Users\11990405\Desktop\Project\Library/OS.h \
  C:/Users/11990405/Desktop/Project/Sources/UART.h \
  C:/Users/11990405/Desktop/Project/Sources/types.h \
- C:/Users/11990405/Desktop/Project/Sources/FTM.h
+ C:/Users/11990405/Desktop/Project/Sources/FTM.h \
+ C:/Users/11990405/Desktop/Project/Sources/PIT.h
 
 ../Generated_Code/Cpu.h:
 
@@ -27,3 +28,5 @@ C:/Users/11990405/Desktop/Project/Sources/UART.h:
 C:/Users/11990405/Desktop/Project/Sources/types.h:
 
 C:/Users/11990405/Desktop/Project/Sources/FTM.h:
+
+C:/Users/11990405/Desktop/Project/Sources/PIT.h:

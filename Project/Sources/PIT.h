@@ -20,7 +20,8 @@
 #include "types.h"
 #include "OS.h"
 
-extern OS_ECB *PITSemaphore;		/*!< Binary semaphore for PIT thread */
+extern OS_ECB *PIT0Semaphore;		/*!< Binary semaphore for PIT0 thread */
+extern OS_ECB *PIT1Semaphore;   /*!< Binary semaphore for PIT1 thread */
 
 /*! @brief Sets up the PIT before first use.
  *
@@ -40,13 +41,13 @@ bool PIT_Init(const uint32_t moduleClk);
  *                 FALSE if the PIT will use the new value after a trigger event.
  *  @note The function will enable the timer and interrupts for the PIT.
  */
-void PIT_Set(const uint32_t period, const bool restart);
+void PIT0_Set(const uint32_t period, const bool restart);
 
 /*! @brief Enables or disables the PIT.
  *
  *  @param enable - TRUE if the PIT is to be enabled, FALSE if the PIT is to be disabled.
  */
-void PIT_Enable(const bool enable);
+void PIT0_Enable(const bool enable);
 
 /*! @brief Interrupt service routine for the PIT.
  *
@@ -54,7 +55,30 @@ void PIT_Enable(const bool enable);
  *  The user callback function will be called.
  *  @note Assumes the PIT has been initialized.
  */
-void __attribute__ ((interrupt)) PIT_ISR(void);
+
+void PIT1_Set(const uint32_t period, const bool restart);
+
+/*! @brief Enables or disables the PIT.
+ *
+ *  @param enable - TRUE if the PIT is to be enabled, FALSE if the PIT is to be disabled.
+ */
+void PIT1_Enable(const bool enable);
+
+/*! @brief Interrupt service routine for the PIT.
+ *
+ *  The periodic interrupt timer has timed out.
+ *  The user thread will be signal.
+ *  @note Assumes the PIT has been initialized.
+ */
+void __attribute__ ((interrupt)) PIT0_ISR(void);
+
+/*! @brief Interrupt service routine for the PIT.
+ *
+ *  The periodic interrupt timer has timed out.
+ *  The user thread will be signal.
+ *  @note Assumes the PIT has been initialized.
+ */
+void __attribute__ ((interrupt)) PIT1_ISR(void);
 
 #endif
 
